@@ -158,3 +158,24 @@ Going forward this file will be appended after every exchange, keeping a running
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+rename the github folder presentation v01 to just "presentation"
+
+---
+
+### 🤖 Claude
+
+Renamed the folder using `git mv` and pushed to the repo.
+
+- `presentation v01/` → `presentation/`
+
+Both files (`Claude.log` and `cloud_paradigm_presentation_v2.pptx`) are now at the new path:  
+👉 https://github.com/reidpurvis/AAUG-2026-04/tree/main/presentation
+
+---
+
+*— Log continues below as the session progresses —*
