@@ -1,0 +1,149 @@
+name: Deploy Azure Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Azure Infrastructure/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Azure Infrastructure/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+      location:
+        description: 'Azure region'
+        required: false
+        default: 'australiaeast'
+
+# ── Permissions for OIDC authentication ───────────────────────
+permissions:
+  id-token: write
+  contents: read
+
+# ── Prevent concurrent deployments to same environment ────────
+concurrency:
+  group: azure-deploy-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+env:
+  BICEP_FILE: './Azure Infrastructure/main.bicep'
+  LOCATION: ${{ github.event.inputs.location || 'australiaeast' }}
+
+jobs:
+  # ────────────────────────────────────────────────────────────
+  # JOB 1: Validate & What-If (runs on PR and push)
+  # ────────────────────────────────────────────────────────────
+  validate:
+    name: Validate & What-If (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Bicep CLI
+        run: az bicep install && az bicep version
+
+      - name: Lint Bicep templates
+        run: |
+          az bicep lint --file "${{ env.BICEP_FILE }}"
+          echo "✅ Lint passed"
+
+      - name: Validate deployment
+        run: |
+          PARAMS_FILE="./Azure Infrastructure/parameters/${{ github.event.inputs.environment || 'dev' }}.parameters.json"
+          az deployment sub validate \
+            --name "validate-${{ github.run_id }}" \
+            --location "${{ env.LOCATION }}" \
+            --template-file "${{ env.BICEP_FILE }}" \
+            --parameters "@${PARAMS_FILE}" \
+            --output table
+          echo "✅ Validation passed"
+
+      - name: What-If analysis
+        run: |
+          PARAMS_FILE="./Azure Infrastructure/parameters/${{ github.event.inputs.environment || 'dev' }}.parameters.json"
+          az deployment sub what-if \
+            --name "whatif-${{ github.run_id }}" \
+            --location "${{ env.LOCATION }}" \
+            --template-file "${{ env.BICEP_FILE }}" \
+            --parameters "@${PARAMS_FILE}" \
+            --result-format FullResourcePayloads \
+            --output table
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 2: Deploy (runs on push to main or manual trigger only)
+  # ────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Bicep CLI
+        run: az bicep install && az bicep version
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          PARAMS_FILE="./Azure Infrastructure/parameters/${ENV}.parameters.json"
+
+          echo "🚀 Deploying to environment: ${ENV}"
+
+          OUTPUT=$(az deployment sub create \
+            --name "deploy-${ENV}-${{ github.run_id }}" \
+            --location "${{ env.LOCATION }}" \
+            --template-file "${{ env.BICEP_FILE }}" \
+            --parameters "@${PARAMS_FILE}" \
+            --output json)
+
+          echo "deployment_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "✅ Deployment complete"
+
+      - name: Output deployment results
+        run: |
+          echo "### Deployment Outputs" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo '${{ steps.deploy.outputs.deployment_output }}' | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d.get('properties',{}).get('outputs',{}), indent=2))" \
+            >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Azure logout
+        if: always()
+        run: az logout

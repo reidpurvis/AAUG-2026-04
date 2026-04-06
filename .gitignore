@@ -5,8 +5,14 @@
 !presentation/
 !presentation/**
 
-# Re-include the README
-!README.md
+# Re-include Azure infrastructure folder and all its contents
+!Azure Infrastructure/
+!Azure Infrastructure/**
 
-# Re-include this file itself
+# Re-include GitHub Actions workflows
+!.github/
+!.github/**
+
+# Re-include the README and this file
+!README.md
 !.gitignore

@@ -365,3 +365,48 @@ This means only `presentation/`, `README.md`, and `.gitignore` itself will ever 
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+Next create a github folder called "Azure Infrastructure" where bicep files will be used to deploy Azure resources using github pipelines
+
+---
+
+### 🤖 Claude
+
+Created the `Azure Infrastructure/` folder with a complete Bicep landing zone and a GitHub Actions deployment pipeline. Also updated `.gitignore` to include the new folders.
+
+**New folder structure:**
+
+```
+Azure Infrastructure/
+├── main.bicep                  # Root orchestration (subscription scope)
+├── modules/
+│   ├── logAnalytics.bicep      # Log Analytics Workspace
+│   ├── network.bicep           # VNet + 3 subnets (app, data, mgmt)
+│   ├── storageAccount.bicep    # Hardened Storage Account (no public access, HTTPS only, soft-delete)
+│   └── keyVault.bicep          # Key Vault (RBAC, purge-protected, diagnostic logging)
+├── parameters/
+│   ├── dev.parameters.json     # Dev environment values
+│   └── prod.parameters.json    # Prod environment values
+└── README.md                   # Setup guide + local dev commands
+
+.github/
+└── workflows/
+    └── deploy-azure-infra.yml  # GitHub Actions pipeline
+```
+
+**Pipeline behaviour:**
+- **Pull Request** → lint + validate + what-if only (no deployment)
+- **Push to main** → lint → validate → what-if → deploy to dev
+- **Manual trigger** → choose environment (dev/prod) and region
+
+**Authentication:** OIDC (federated identity) — no stored Azure credentials in GitHub secrets
+
+**Updated `.gitignore`** to whitelist `Azure Infrastructure/` and `.github/` alongside the existing `presentation/` and `README.md`.
+
+---
+
+*— Log continues below as the session progresses —*
