@@ -471,3 +471,29 @@ The SVG is self-contained with embedded styles and renders correctly in any brow
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+what went wrong:  Run azure/login@v2 ... AADSTS70025: The client has no configured federated identity credentials ...
+
+### 🤖 Claude
+
+**Diagnosis:** The App Registration (`sp-github-aaug-2026-04`) existed and was found by Client ID, but no OIDC federated credentials were attached to it. The pipeline reached Entra ID, Entra found the app, but had no subject patterns to validate the GitHub JWT against — hence `AADSTS70025`.
+
+**Root cause:** The setup script (`setup-service-principal.sh`) either wasn't run, or the `az ad app federated-credential create` calls failed silently due to Entra ID propagation delay after the SP was first created.
+
+**Fix:** Added `Azure Infrastructure/scripts/fix-federated-credentials.sh` — a targeted script that looks up the existing App Registration and creates only the 4 federated credentials, skipping anything that already exists.
+
+Run it in Azure Cloud Shell or any terminal with `az login`:
+```bash
+chmod +x "Azure Infrastructure/scripts/fix-federated-credentials.sh"
+./"Azure Infrastructure/scripts/fix-federated-credentials.sh"
+```
+
+Then re-trigger the pipeline from GitHub Actions → Run workflow.
+
+---
+
+*— Log continues below as the session progresses —*
