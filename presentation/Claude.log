@@ -258,3 +258,42 @@ Added all intermediate and final build outputs into the `presentation/` folder, 
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+please reinsert slide 2 "presentation overview" of the original presentation_v2 into the *_v3 version
+
+---
+
+### 🤖 Claude
+
+Extracted the original "Presentation Overview" slide (slide2 from `cloud_paradigm_presentation_v2.pptx`) and inserted it at position 2 in `cloud_paradigm_presentation_v3.pptx`, between the title slide and the new Agenda slide. The deck is now 22 slides.
+
+**Updated slide order:**
+
+| # | Slide |
+|---|-------|
+| 1 | Title — Infrastructure is Dead… |
+| 2 | **Presentation Overview** ← re-inserted from v2 |
+| 3 | Agenda — Session Overview |
+| 4 | Opening Poll |
+| 5–11 | Parts 1 & 2 content |
+| 12 | Live Demo (dark divider) |
+| 13 | Guardrails & Governance |
+| 14 | Q&A Break #1 (dark divider) |
+| 15–16 | Case Studies |
+| 17 | Poll #2 |
+| 18 | Addressing Concerns |
+| 19 | Engineer as Orchestrator |
+| 20 | Adoption Roadmap |
+| 21 | Key Takeaways |
+| 22 | Open Q&A (dark divider) |
+| 22 | Contact |
+
+All outputs (PPTX, PDF, slide JPGs, QA grids) updated in repo.
+
+---
+
+*— Log continues below as the session progresses —*
