@@ -179,3 +179,53 @@ Both files (`Claude.log` and `cloud_paradigm_presentation_v2.pptx`) are now at t
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+Please generate me a new file "version 3" for a next version of a slide presentation based on the agenda you've suggested using the format within the uploaded slide deck
+
+---
+
+### 🤖 Claude
+
+Built a full 21-slide deck (`cloud_paradigm_presentation_v3.pptx`) based on the proposed agenda, matching the Cloud Paradigm template exactly.
+
+**Slide inventory:**
+
+| # | File | Slide Title | Type |
+|---|------|-------------|------|
+| 1 | slide1 | Infrastructure is Dead… (title) | Title |
+| 2 | slide2 | Session Overview / Agenda | Content |
+| 3 | slide4 | Opening Poll — Cloud Automation Maturity | 📊 Poll |
+| 4 | slide5 | What is Agentic AI? | Content |
+| 5 | slide6 | The Old World | Content |
+| 6 | slide7 | The New World | Content |
+| 7 | slide8 | Agentic AI Architecture on Azure | Content |
+| 8 | slide9 | How Agents Interact with Azure | Content |
+| 9 | slide10 | Agents in the DevOps Lifecycle | Content |
+| 10 | slide11 | Live Demo — Agentic Provisioning | 🎬 Dark Divider |
+| 11 | slide12 | Guardrails and Governance | Content |
+| 12 | slide13 | Q&A Break #1 — Questions So Far? | ❓ Dark Divider |
+| 13 | slide14 | Case Study — Autonomous Remediation | 📁 Content |
+| 14 | slide15 | Case Study — Cost Optimisation | 📁 Content |
+| 15 | slide16 | Poll #2 — Biggest Concern | 📊 Poll |
+| 16 | slide17 | Addressing the Concerns | Content |
+| 17 | slide18 | The Engineer as Orchestrator | Content |
+| 18 | slide19 | A Practical Adoption Roadmap | Content |
+| 19 | slide20 | Key Takeaways | Content |
+| 20 | slide21 | Open Q&A — Questions, Challenges, Ideas? | ❓ Dark Divider |
+| 21 | slide3 | Get in Touch (contact) | Contact |
+
+**Design approach:**
+- All content slides retain the Cloud Paradigm template (teal top bar, green left accent, blue bottom bar, Cloud Paradigm logo)
+- Teal/blue section badge top-left, dark navy title, blue subtitle, body with bold headers + regular detail text, keyword tags at bottom
+- Demo, Q&A, and Poll divider slides use a full dark navy background with centred large white heading — creates visual rhythm and signals transitions
+- All 21 slides validated, packed, and visually QA'd
+
+Committed as: `presentation/cloud_paradigm_presentation_v3.pptx`
+
+---
+
+*— Log continues below as the session progresses —*
