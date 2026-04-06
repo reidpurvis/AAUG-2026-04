@@ -332,3 +332,36 @@ Deck is now **23 slides**. All outputs (PPTX, PDF, 23 slide JPGs, QA grids) upda
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+Create a .gitignore file and ensure that the presentation folder and the README.md file are included
+
+---
+
+### 🤖 Claude
+
+Created a whitelist-style `.gitignore` at the repo root. It ignores everything by default, then explicitly re-includes:
+
+```
+# Ignore everything by default
+*
+
+# Re-include the presentation folder and all its contents
+!presentation/
+!presentation/**
+
+# Re-include the README
+!README.md
+
+# Re-include this file itself
+!.gitignore
+```
+
+This means only `presentation/`, `README.md`, and `.gitignore` itself will ever be tracked — anything else added to the repo root (build artifacts, temp files, credentials, etc.) will be ignored automatically.
+
+---
+
+*— Log continues below as the session progresses —*
