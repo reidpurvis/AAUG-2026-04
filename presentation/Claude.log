@@ -229,3 +229,32 @@ Committed as: `presentation/cloud_paradigm_presentation_v3.pptx`
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+please add all output (both intermediate and final) into the presentation folder within claude
+
+---
+
+### 🤖 Claude
+
+Added all intermediate and final build outputs into the `presentation/` folder, organised into subfolders:
+
+**`presentation/` (root)**
+- `cloud_paradigm_presentation_v2.pptx` — original uploaded template (3 slides)
+- `cloud_paradigm_presentation_v3.pptx` — final 21-slide deck
+- `cloud_paradigm_presentation_v3.pdf` — PDF export of v3
+
+**`presentation/slides-jpg/`**
+- `slide-01.jpg` through `slide-21.jpg` — individual slide renders at 120dpi (used for QA)
+
+**`presentation/qa-thumbnails/`**
+- `template_thumbnail.jpg` — thumbnail grid of the original 3-slide template
+- `qa_grid_slides_01-12.jpg` — QA thumbnail grid, slides 1–12
+- `qa_grid_slides_13-21.jpg` — QA thumbnail grid, slides 13–21
+
+---
+
+*— Log continues below as the session progresses —*
