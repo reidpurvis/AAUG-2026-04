@@ -1,0 +1,12 @@
+# Ignore everything by default
+*
+
+# Re-include the presentation folder and all its contents
+!presentation/
+!presentation/**
+
+# Re-include the README
+!README.md
+
+# Re-include this file itself
+!.gitignore
