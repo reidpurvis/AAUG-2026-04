@@ -1,0 +1,114 @@
+# Claude.log — AAUG-2026-04 Presentation Development
+# Conversation recorded between Reid Purvis and Claude (Anthropic)
+# Session started: 2026-04-06
+# Topic: "Infrastructure is Dead, Long Live Infrastructure in the Age of Agentic AI"
+#         1-hour interactive presentation for Adelaide Azure User Group
+# ============================================================
+
+---
+
+## [TURN 1]
+
+### USER:
+Uploaded file: cloud_paradigm_presentation_v2.pptx
+Request: "Please read this presentation and work with me to fill in the content for a 1 hour interactive presentation about how Agentic AI can be used to build cloud infrastructure"
+
+### CLAUDE:
+Read the presentation. Found 3 slides:
+  - Slide 1: Title — "Infrastructure is Dead, Long Live Infrastructure in the Age of Agentic AI" | Reid Purvis, Owner & Principal, Cloud Paradigm Pty Ltd | March 2026
+  - Slide 2: Presentation Overview — describes the convergence of Agentic AI, Azure, DevOps, and Enterprise Cloud
+  - Slide 3: Contact — Reid Purvis, +61 427 038 685, reidpurvis@cloudparadigm.com.au, www.cloudparadigm.com.au
+
+Asked clarifying questions:
+  Q1: Who is the audience?
+  Q2: What interactive elements are wanted?
+  Q3: What level of Azure/Agentic AI experience to assume?
+
+---
+
+## [TURN 2]
+
+### USER:
+Q: Who is the audience for this presentation?
+A: Technical engineers / architects
+
+Q: What interactive elements do you want in the 1-hour session?
+A: Live demo / walkthrough, Audience Q&A breaks, Polls or quizzes, Case study discussion
+
+Q: How much Azure / Agentic AI context should we assume the audience already has?
+A: Intermediate — familiar with Azure & DevOps
+
+### CLAUDE:
+Proposed a 21-slide structure across 4 parts + open/close:
+
+  OPEN (0–8 min) — Setting the scene
+    Slide 1:  Title slide (existing)
+    Slide 2:  Agenda & session structure
+    Slide 3:  Opening poll — where is your org today on cloud automation? [Poll]
+    Slide 4:  What "Agentic AI" actually means (and what it isn't)
+
+  PART 1 (8–22 min) — The infrastructure paradigm shift
+    Slide 5:  The old world — manual pipelines, static configs, reactive ops
+    Slide 6:  The new world — autonomous agents, intent-driven infra, proactive ops
+    Slide 7:  Agentic AI architecture on Azure — key building blocks
+    Slide 8:  How agents interact with Azure (ARM, Bicep, Terraform, REST)
+
+  PART 2 (22–38 min) — Agents in the DevOps lifecycle
+    Slide 9:  Where agents plug into your pipeline — plan, provision, monitor, remediate
+    Slide 10: Live demo — agent provisioning an Azure environment from a prompt [Demo]
+    Slide 11: Guardrails & governance — policy enforcement, approval gates, audit trails
+    Slide 12: Q&A break #1 [Q&A]
+
+  PART 3 (38–52 min) — Real-world application
+    Slide 13: Case study — autonomous remediation in a multi-region Azure environment [Case Study]
+    Slide 14: Case study — agent-driven cost optimisation & right-sizing [Case Study]
+    Slide 15: Poll #2 — what's your biggest concern about adopting agentic infra? [Poll]
+    Slide 16: Addressing the concerns — security, trust, blast radius, compliance
+
+  PART 4 (52–58 min) — Getting started & the engineer's new role
+    Slide 17: The engineer as orchestrator — what skills matter now
+    Slide 18: A practical adoption roadmap — crawl / walk / run
+
+  CLOSE (58–60 min) — Wrap-up
+    Slide 19: Key takeaways
+    Slide 20: Q&A / open discussion [Q&A]
+    Slide 21: Contact & next steps (existing slide)
+
+Also asked follow-up questions:
+  - Live demo (slide 10): specific scenario in mind, or script a hypothetical walkthrough?
+  - Case studies (slides 13–14): realistic composites or from Cloud Paradigm engagements?
+  - Polls: include suggested debrief talking points for each poll result?
+
+---
+
+## [TURN 3]
+
+### USER:
+"I've created a github repo: https://github.com/reidpurvis/AAUG-2026-04 that I would like you to use to store this content in versions as we develop it. Please create a 'presentation v01' folder within the github repo and upload the original slides and also create a 'Claude.log' file to keep a copy of this whole conversation within it. So that for this chat, everytime I ask you something you record both my request and your output within this file"
+
+### CLAUDE:
+- Fetched the GitHub repo — confirmed public, only had README.md
+- Asked for a GitHub Personal Access Token with repo write access
+- Provided instructions for generating a classic PAT with `repo` scope
+
+---
+
+## [TURN 4]
+
+### USER:
+Provided GitHub Personal Access Token (redacted from log for security)
+
+### CLAUDE:
+- Cloned repo via HTTPS with token authentication
+- Created folder: "presentation v01/"
+- Copied original file: cloud_paradigm_presentation_v2.pptx → "presentation v01/"
+- Created this Claude.log file
+- Committed and pushed both files to main branch of reidpurvis/AAUG-2026-04
+
+Pending items (awaiting user input before proceeding):
+  1. Demo scenario for slide 10 — hypothetical script or specific tooling?
+  2. Case study source — composites or real Cloud Paradigm engagements?
+  3. Poll debrief talking points — yes or no?
+
+============================================================
+# END OF LOG — updated each conversation turn
