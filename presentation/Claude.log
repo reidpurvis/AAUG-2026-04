@@ -410,3 +410,42 @@ Azure Infrastructure/
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+Help me create an Entra Service Principal so I can execute the Github pipelines using this service principal
+
+---
+
+### 🤖 Claude
+
+Created two setup scripts (Bash + PowerShell) that fully automate the Service Principal and OIDC federated credential creation:
+
+**Files added:**
+- `Azure Infrastructure/scripts/setup-service-principal.sh` — for macOS / Linux / Azure Cloud Shell
+- `Azure Infrastructure/scripts/setup-service-principal.ps1` — for Windows (PowerShell 7+)
+
+**What each script does (6 steps):**
+
+1. **Create App Registration** — `sp-github-aaug-2026-04` in Entra ID (skips if already exists)
+2. **Create Service Principal** — attached to the App Registration
+3. **Assign Contributor role** — at `/subscriptions/<id>` scope so the pipeline can create Resource Groups and deploy resources
+4. **Create 4 OIDC Federated Credentials** — no stored secrets, tokens are issued by GitHub and validated by Entra:
+
+   | Credential name | Subject (what GitHub sends) | Used when |
+   |---|---|---|
+   | `github-branch-main` | `repo:reidpurvis/AAUG-2026-04:ref:refs/heads/main` | Push to main / workflow_dispatch |
+   | `github-pull-request` | `repo:reidpurvis/AAUG-2026-04:pull_request` | PR validate runs |
+   | `github-environment-dev` | `repo:reidpurvis/AAUG-2026-04:environment:dev` | Deploy job (dev) |
+   | `github-environment-prod` | `repo:reidpurvis/AAUG-2026-04:environment:prod` | Deploy job (prod) |
+
+5. **Output GitHub secrets** — prints the 3 values to add; optionally sets them automatically if GitHub CLI (`gh`) is installed
+6. **Remind about GitHub Environments** — create `dev` (no reviewers) and `prod` (required reviewer) in GitHub Settings → Environments
+
+**Prerequisites:** Azure CLI logged in + Application Administrator role in Entra ID
+
+---
+
+*— Log continues below as the session progresses —*
