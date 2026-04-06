@@ -497,3 +497,31 @@ Then re-trigger the pipeline from GitHub Actions → Run workflow.
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+fix this error: BCP065 utcNow / BCP062 tags invalid / BCP318 module null / BCP142 nested for-expressions
+
+---
+
+### 🤖 Claude
+
+Fixed three distinct Bicep compiler errors across `main.bicep` and `modules/network.bicep`:
+
+**BCP065 + BCP062 — `utcNow()` in a variable (main.bicep line 38)**
+`utcNow()` is only valid as a parameter default value in Bicep, not inside a `var` block.
+Fix: moved it to a new parameter `deployedAt string = utcNow('yyyy-MM-dd')`, then referenced `deployedAt` in the tags variable.
+
+**BCP318 — conditional module outputs without null-assertion (main.bicep lines 91, 99–101)**
+When a module is wrapped in `if (condition)`, Bicep treats it as `module | null`. Accessing `.outputs.*` on it in a ternary triggered BCP318.
+Fix: added the `!` null-assertion operator (`logAnalytics!.outputs.workspaceId`) to tell Bicep the module is guaranteed non-null inside the truthy branch. Applied to all 4 affected output/param lines.
+
+**BCP142 — nested for-expressions (modules/network.bicep line 53)**
+Bicep does not allow a `for` loop nested inside another `for` loop. The inner loop was iterating `serviceEndpoints` strings to create `{ service: ep }` objects.
+Fix: pre-expanded the service endpoint objects directly in the `subnets` variable (e.g. `[{ service: 'Microsoft.Storage' }]`), then passed `subnet.serviceEndpoints` directly to the resource property — removing the nested loop entirely.
+
+---
+
+*— Log continues below as the session progresses —*

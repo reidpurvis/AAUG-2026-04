@@ -16,18 +16,25 @@ param tags object
 param addressPrefix string = '10.0.0.0/16'
 
 // ── Subnets ───────────────────────────────────────────────────
-// /24 subnets carved from the address space
+// /24 subnets carved from the address space.
+// Service endpoints are pre-expanded as objects (nested for-loops not allowed in Bicep).
 var subnets = [
   {
     name: 'snet-app'
     addressPrefix: replace(addressPrefix, '0.0/16', '1.0/24')
-    serviceEndpoints: ['Microsoft.Storage', 'Microsoft.KeyVault']
+    serviceEndpoints: [
+      { service: 'Microsoft.Storage' }
+      { service: 'Microsoft.KeyVault' }
+    ]
     delegations: []
   }
   {
     name: 'snet-data'
     addressPrefix: replace(addressPrefix, '0.0/16', '2.0/24')
-    serviceEndpoints: ['Microsoft.Storage', 'Microsoft.Sql']
+    serviceEndpoints: [
+      { service: 'Microsoft.Storage' }
+      { service: 'Microsoft.Sql' }
+    ]
     delegations: []
   }
   {
@@ -50,9 +57,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       name: subnet.name
       properties: {
         addressPrefix: subnet.addressPrefix
-        serviceEndpoints: [for ep in subnet.serviceEndpoints: {
-          service: ep
-        }]
+        serviceEndpoints: subnet.serviceEndpoints
         delegations: subnet.delegations
         privateEndpointNetworkPolicies: 'Disabled'
       }
