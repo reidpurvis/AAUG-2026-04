@@ -297,3 +297,38 @@ All outputs (PPTX, PDF, slide JPGs, QA grids) updated in repo.
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+*[Uploaded whiteboard sketch showing: Claude → GitHub (Repo + Codespaces + Preferred Scripting Language) → Azure Environment (Resource Group), with 4 steps: ① Setup base Repo ② Setup base Azure ③ Setup base Claude ④ Vibe Code → Repeat]*
+
+please use this as input
+
+---
+
+### 🤖 Claude
+
+Interpreted the whiteboard sketch as the Live Demo architecture diagram and built it as a new slide (slide 12), inserted immediately after the "Live Demo" dark divider slide.
+
+**Slide: "Demo Architecture"**  
+Subtitle: *Claude + GitHub Codespaces + Azure Environment*
+
+The slide faithfully reproduces the sketch as a branded Cloud Paradigm diagram:
+- **CLAUDE box** (teal) — large C icon, "AI Agent / claude.ai" label
+- **→ Arrow** (teal)
+- **GITHUB box** (blue) — sub-boxes for "Repo" and "Codespaces", note for "Preferred Scripting Language (Bicep / Terraform / PowerShell)"
+- **→ Arrow** (green)
+- **AZURE ENVIRONMENT box** (green) — dashed inner box for "Resource Group (RG)"
+- **4 step pills** across the bottom row:
+  - ① Setup base Repo (teal)
+  - ② Setup base Azure (green)
+  - ③ Setup base Claude (teal)
+  - ④ Vibe Code ↺ Repeat (blue)
+
+Deck is now **23 slides**. All outputs (PPTX, PDF, 23 slide JPGs, QA grids) updated in repo.
+
+---
+
+*— Log continues below as the session progresses —*
