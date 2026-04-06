@@ -449,3 +449,25 @@ Created two setup scripts (Bash + PowerShell) that fully automate the Service Pr
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+Save this visual from earlier as an artifact: "oidc_token_flow"
+
+---
+
+### 🤖 Claude
+
+Saved the OIDC token flow diagram as a standalone SVG file: `presentation/oidc_token_flow.svg`
+
+The SVG is self-contained with embedded styles and renders correctly in any browser or SVG viewer. It shows the full OIDC authentication chain:
+
+- GitHub Actions → GitHub OIDC IdP → Entra ID → Azure subscription
+- Bicep deployment path (dashed green)
+- "Why no stored secrets?" explanation panel
+
+---
+
+*— Log continues below as the session progresses —*
