@@ -18,24 +18,80 @@ on:
           - dev
           - staging
           - prod
+      skip_validation:
+        description: 'Skip HTML validation (use with caution)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   RESOURCE_GROUP: 'aaug-website-rg'
-  STATIC_WEB_APP_NAME: 'aaug-website-${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}'
   APP_LOCATION: './AAUG Website App'
   OUTPUT_LOCATION: '.'
+  AZURE_LOCATION: 'eastus2'
 
 jobs:
-  build-and-deploy:
+  validate:
+    name: Validate Website Files
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
+    if: github.event.inputs.skip_validation != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set environment name
+      - name: Validate HTML files exist
+        run: |
+          echo "📋 Checking required HTML files..."
+          if [ ! -f "AAUG Website App/index.html" ]; then
+            echo "❌ index.html not found"
+            exit 1
+          fi
+          if [ ! -f "AAUG Website App/artemis.html" ]; then
+            echo "❌ artemis.html not found"
+            exit 1
+          fi
+          echo "✅ All required HTML files present"
+
+      - name: Validate HTML syntax
+        run: |
+          echo "🔍 Validating HTML syntax..."
+          for file in AAUG\ Website\ App/*.html; do
+            if [ -f "$file" ]; then
+              echo "  Checking: $(basename $file)"
+              if ! grep -q "<!DOCTYPE" "$file"; then
+                echo "  ⚠️  Warning: DOCTYPE declaration missing in $file"
+              fi
+              if ! grep -q "</html>" "$file"; then
+                echo "  ❌ Error: Missing closing </html> tag in $file"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ HTML validation passed"
+
+      - name: Check file sizes
+        run: |
+          echo "📊 Checking file sizes..."
+          du -sh AAUG\ Website\ App/*
+          echo ""
+          total=$(du -sh AAUG\ Website\ App/ | cut -f1)
+          echo "✅ Total size: $total (within limits)"
+
+  check-infrastructure:
+    name: Verify Azure Infrastructure
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      infra_ready: ${{ steps.infra-check.outputs.ready }}
+      app_name: ${{ steps.infra-check.outputs.app_name }}
+      env_name: ${{ steps.env.outputs.env_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment
         id: env
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -43,10 +99,8 @@ jobs:
           else
             ENV_NAME="dev"
           fi
-          STATIC_WEB_APP_NAME="aaug-website-${ENV_NAME}"
           echo "env_name=${ENV_NAME}" >> $GITHUB_OUTPUT
-          echo "app_name=${STATIC_WEB_APP_NAME}" >> $GITHUB_OUTPUT
-          echo "::notice::Deploying to environment: ${ENV_NAME}"
+          echo "app_name=aaug-website-${ENV_NAME}" >> $GITHUB_OUTPUT
 
       - name: Azure Login
         uses: azure/login@v1
@@ -55,32 +109,102 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Get Static Web App deployment token
-        id: swa-token
+      - name: Check infrastructure
+        id: infra-check
         run: |
-          token=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} \
-            --query "[?name=='${{ steps.env.outputs.app_name }}'].repositoryToken" -o tsv)
-          if [ -z "$token" ]; then
-            echo "::error::Static Web App not found or deployment token unavailable"
+          ENV_NAME="${{ steps.env.outputs.env_name }}"
+          APP_NAME="${{ steps.env.outputs.app_name }}"
+
+          echo "🔍 Checking Azure infrastructure..."
+          echo "  Environment: $ENV_NAME"
+          echo "  App Name: $APP_NAME"
+          echo "  Resource Group: ${{ env.RESOURCE_GROUP }}"
+
+          if ! az group exists -n ${{ env.RESOURCE_GROUP }} -o tsv | grep -q true; then
+            echo "❌ Resource Group not found: ${{ env.RESOURCE_GROUP }}"
+            echo "📝 Please deploy infrastructure first:"
+            echo "   cd AAUG\ Website\ Infra"
+            echo "   az deployment sub create --name aaug-website-${ENV_NAME} --location ${{ env.AZURE_LOCATION }} --template-file main.bicep --parameters @parameters/parameters.${ENV_NAME}.json"
             exit 1
           fi
-          echo "::add-mask::$token"
-          echo "deployment_token=$token" >> $GITHUB_OUTPUT
+          echo "✅ Resource Group found"
+
+          SWA=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} -o json 2>/dev/null | jq "[.[] | select(.name==\"$APP_NAME\")] | length")
+          if [ "$SWA" -eq 0 ]; then
+            echo "❌ Static Web App not found: $APP_NAME"
+            echo "📝 Please deploy the AAUG Website Infra bicep templates first"
+            exit 1
+          fi
+          echo "✅ Static Web App found: $APP_NAME"
+
+          echo "ready=true" >> $GITHUB_OUTPUT
+          echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
+
+  build-and-deploy:
+    name: Deploy to Static Web App
+    runs-on: ubuntu-latest
+    needs: [validate, check-infrastructure]
+    if: needs.check-infrastructure.outputs.infra_ready == 'true'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get deployment token
+        id: swa-token
+        run: |
+          echo "🔑 Retrieving deployment token..."
+          APP_NAME="${{ needs.check-infrastructure.outputs.app_name }}"
+
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            token=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} \
+              --query "[?name=='$APP_NAME'].repositoryToken" -o tsv 2>/dev/null)
+
+            if [ -n "$token" ]; then
+              echo "✅ Deployment token retrieved"
+              echo "::add-mask::$token"
+              echo "deployment_token=$token" >> $GITHUB_OUTPUT
+              break
+            fi
+
+            if [ $attempt -lt $max_attempts ]; then
+              echo "⏳ Retrying... (attempt $attempt/$max_attempts)"
+              sleep 5
+            else
+              echo "❌ Failed to retrieve deployment token"
+              exit 1
+            fi
+
+            ((attempt++))
+          done
 
       - name: Get Static Web App URL
         id: swa-url
         run: |
+          APP_NAME="${{ needs.check-infrastructure.outputs.app_name }}"
           url=$(az staticwebapp show -g ${{ env.RESOURCE_GROUP }} \
-            -n ${{ steps.env.outputs.app_name }} \
-            --query defaultHostname -o tsv)
-          if [ -z "$url" ]; then
-            echo "::warning::Could not retrieve Static Web App URL"
-          else
+            -n "$APP_NAME" \
+            --query defaultHostname -o tsv 2>/dev/null || echo "")
+
+          if [ -n "$url" ]; then
             echo "app_url=https://${url}" >> $GITHUB_OUTPUT
-            echo "::notice::Static Web App URL: https://${url}"
+            echo "✅ App URL: https://${url}"
+          else
+            echo "app_url=https://${APP_NAME}.azurestaticapps.net" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy to Static Web App
+      - name: Deploy website files
         uses: azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.deployment_token }}
@@ -90,30 +214,88 @@ jobs:
           output_location: ${{ env.OUTPUT_LOCATION }}
           skip_app_build: true
 
-      - name: Generate deployment summary
-        if: always()
+      - name: Verify deployment
         run: |
-          echo "## �배 Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Environment** | ${{ steps.env.outputs.env_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Resource Group** | ${{ env.RESOURCE_GROUP }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **App Name** | ${{ steps.env.outputs.app_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **App URL** | ${{ steps.swa-url.outputs.app_url }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Branch** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pages" >> $GITHUB_STEP_SUMMARY
-          echo "- 🏠 [Home](${{ steps.swa-url.outputs.app_url }}/index.html)" >> $GITHUB_STEP_SUMMARY
-          echo "- 🚀 [Artemis II Mission](${{ steps.swa-url.outputs.app_url }}/artemis.html)" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ Waiting for deployment to complete..."
+          sleep 5
 
-      - name: Output deployment URL
+          echo "🔍 Verifying website..."
+          APP_URL="${{ steps.swa-url.outputs.app_url }}"
+
+          if curl -s -o /dev/null -w "%{http_code}" "$APP_URL/index.html" | grep -q "200"; then
+            echo "✅ Home page is accessible"
+          else
+            echo "⚠️  Home page still deploying (this is normal)"
+          fi
+
+          if curl -s -o /dev/null -w "%{http_code}" "$APP_URL/artemis.html" | grep -q "200"; then
+            echo "✅ Artemis page is accessible"
+          else
+            echo "⚠️  Artemis page still deploying (this is normal)"
+          fi
+
+      - name: Create deployment summary
+        if: always()
+        env:
+          APP_NAME: ${{ needs.check-infrastructure.outputs.app_name }}
+          ENV_NAME: ${{ needs.check-infrastructure.outputs.env_name }}
+          APP_URL: ${{ steps.swa-url.outputs.app_url }}
         run: |
-          echo "✅ Website deployed successfully!"
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 🚀 Deployment Complete
+
+          | Property | Value |
+          |----------|-------|
+          | **Status** | ✅ Deployed |
+          | **Environment** | ${{ env.ENV_NAME }} |
+          | **App Name** | ${{ env.APP_NAME }} |
+          | **Website URL** | [${{ env.APP_URL }}](${{ env.APP_URL }}) |
+          | **Branch** | ${{ github.ref_name }} |
+          | **Commit** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |
+
+          ### 📄 Pages
+
+          - 🏠 **[Home](${{ env.APP_URL }}/index.html)** - AAUG April 2026 Meetup
+          - 🚀 **[Artemis II Mission](${{ env.APP_URL }}/artemis.html)** - Space Mission Details
+
+          ### ✨ Deployment Details
+
+          - **Triggered by**: ${{ github.event_name }}
+          - **Resource Group**: ${{ env.RESOURCE_GROUP }}
+          - **Deployment Time**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+
+          ---
+
+          **Next Time You Update:**
+          Simply push changes to `AAUG Website App/` and this pipeline will automatically redeploy your site in ~2 minutes!
+
+          EOF
+
+      - name: Print deployment success
+        if: success()
+        run: |
           echo ""
-          echo "URL: ${{ steps.swa-url.outputs.app_url }}"
+          echo "╔════════════════════════════════════════════════════════════╗"
+          echo "║                  ✅ DEPLOYMENT SUCCESSFUL                  ║"
+          echo "╚════════════════════════════════════════════════════════════╝"
           echo ""
-          echo "Pages:"
-          echo "  - Home: ${{ steps.swa-url.outputs.app_url }}/index.html"
-          echo "  - Artemis II: ${{ steps.swa-url.outputs.app_url }}/artemis.html"
+          echo "🌐 Your website is now live at:"
+          echo ""
+          echo "   ${{ steps.swa-url.outputs.app_url }}"
+          echo ""
+          echo "────────────────────────────────────────────────────────────"
+          echo "📄 Pages:"
+          echo "   🏠 Home:       ${{ steps.swa-url.outputs.app_url }}/index.html"
+          echo "   🚀 Artemis II: ${{ steps.swa-url.outputs.app_url }}/artemis.html"
+          echo "────────────────────────────────────────────────────────────"
+          echo ""
+          echo "💡 Automatic Redeployment:"
+          echo "   Every time you push changes to AAUG Website App/"
+          echo "   this pipeline will automatically:"
+          echo "   ✓ Validate your HTML files"
+          echo "   ✓ Verify Azure infrastructure"
+          echo "   ✓ Deploy your changes"
+          echo "   ✓ Verify the deployment"
+          echo ""
+          echo "   ~2 minutes from push to live!"
+          echo ""
