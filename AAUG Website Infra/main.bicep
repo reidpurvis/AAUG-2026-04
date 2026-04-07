@@ -11,7 +11,7 @@ targetScope = 'subscription'
 param environmentName string
 
 @description('Azure region for all resources')
-param location string = 'australiaeast'
+param location string = 'eastus2'
 
 @description('Project / workload name')
 param projectName string = 'aaug'
@@ -22,23 +22,11 @@ param websiteName string = 'aaug-website'
 @description('Your team or cost centre tag')
 param ownerTag string = 'AAUG'
 
-@description('Deployment timestamp — auto-set, do not override')
-param deployedAt string = utcNow('yyyy-MM-dd')
-
 @description('Deploy Static Web App?')
 param deployStaticWebApp bool = true
 
 @description('Deploy storage account for static hosting fallback?')
 param deployStorageAccount bool = true
-
-@description('GitHub repository owner')
-param githubRepoOwner string = ''
-
-@description('GitHub repository name')
-param githubRepoName string = ''
-
-@description('GitHub branch for deployment')
-param githubBranch string = 'main'
 
 // ── Variables ─────────────────────────────────────────────────
 var nameSuffix = '${projectName}-${environmentName}'
@@ -48,7 +36,6 @@ var tags = {
   Project: projectName
   Owner: ownerTag
   ManagedBy: 'GitHub Actions + Bicep'
-  DeployedAt: deployedAt
 }
 
 // ── Resource Group ────────────────────────────────────────────
@@ -86,7 +73,7 @@ module staticWebApp 'modules/staticWebApp.bicep' = if (deployStaticWebApp) {
 // ── Outputs ───────────────────────────────────────────────────
 output resourceGroupName string = rg.name
 output resourceGroupId string = rg.id
-output staticWebAppName string = deployStaticWebApp ? staticWebApp!.outputs.staticWebAppName : 'not deployed'
-output staticWebAppUrl string = deployStaticWebApp ? staticWebApp!.outputs.defaultHostName : 'not deployed'
-output storageAccountName string = deployStorageAccount ? storage!.outputs.storageAccountName : 'not deployed'
-output storageAccountWebEndpoint string = deployStorageAccount ? storage!.outputs.primaryEndpoints.web : 'not deployed'
+output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppName : 'not deployed'
+output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.defaultHostName : 'not deployed'
+output storageAccountName string = deployStorageAccount ? storage.outputs.storageAccountName : 'not deployed'
+output storageAccountWebEndpoint string = deployStorageAccount ? storage.outputs.webEndpoint : 'not deployed'

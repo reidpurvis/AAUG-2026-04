@@ -46,6 +46,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
       defaultAction: 'Allow'
       bypass: 'AzureServices'
     }
+    staticWebsite: enableStaticWebsite ? {
+      indexDocument: 'index.html'
+      errorDocument404Path: '404.html'
+    } : null
   }
 }
 
@@ -72,16 +76,6 @@ resource webContainer 'Microsoft.Storage/storageAccounts/blobServices/containers
   name: '$web'
   properties: {
     publicAccess: 'Blob'
-  }
-}
-
-// ── Static Website Properties ──────────────────────────────────
-resource staticWebsite 'Microsoft.Storage/storageAccounts/staticSites@2023-01-01' = if (enableStaticWebsite) {
-  parent: storageAccount
-  name: 'default'
-  properties: {
-    indexDocument: 'index.html'
-    errorDocument404Path: '404.html'
   }
 }
 

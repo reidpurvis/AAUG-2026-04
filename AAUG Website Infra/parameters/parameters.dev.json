@@ -6,7 +6,7 @@
       "value": "dev"
     },
     "location": {
-      "value": "australiaeast"
+      "value": "eastus2"
     },
     "projectName": {
       "value": "aaug"
@@ -22,15 +22,6 @@
     },
     "deployStorageAccount": {
       "value": true
-    },
-    "githubRepoOwner": {
-      "value": ""
-    },
-    "githubRepoName": {
-      "value": ""
-    },
-    "githubBranch": {
-      "value": "main"
     }
   }
 }

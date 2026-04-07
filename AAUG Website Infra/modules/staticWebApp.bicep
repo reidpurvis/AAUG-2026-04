@@ -37,15 +37,6 @@ param apiLocation string = ''
 @description('Output location for build artifacts')
 param outputLocation string = ''
 
-// ── Variables ─────────────────────────────────────────────────
-var repositoryConfig = empty(repositoryUrl) ? {} : {
-  repositoryUrl: repositoryUrl
-  branch: repositoryBranch
-  appLocation: appLocation
-  apiLocation: apiLocation
-  outputLocation: outputLocation
-}
-
 // ── Static Web App ────────────────────────────────────────────
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   name: name
@@ -75,4 +66,3 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
 output staticWebAppId string = staticWebApp.id
 output staticWebAppName string = staticWebApp.name
 output defaultHostName string = staticWebApp.properties.defaultHostname
-output repositoryToken string = staticWebApp.listSecrets().repositoryToken
