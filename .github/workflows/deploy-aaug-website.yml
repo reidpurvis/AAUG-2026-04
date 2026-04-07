@@ -1,0 +1,119 @@
+name: Deploy AAUG Website to Static Web App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'AAUG Website App/**'
+      - '.github/workflows/deploy-aaug-website.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  RESOURCE_GROUP: 'aaug-website-rg'
+  STATIC_WEB_APP_NAME: 'aaug-website-${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}'
+  APP_LOCATION: './AAUG Website App'
+  OUTPUT_LOCATION: '.'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment name
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV_NAME="${{ inputs.environment }}"
+          else
+            ENV_NAME="dev"
+          fi
+          STATIC_WEB_APP_NAME="aaug-website-${ENV_NAME}"
+          echo "env_name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "app_name=${STATIC_WEB_APP_NAME}" >> $GITHUB_OUTPUT
+          echo "::notice::Deploying to environment: ${ENV_NAME}"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Static Web App deployment token
+        id: swa-token
+        run: |
+          token=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} \
+            --query "[?name=='${{ steps.env.outputs.app_name }}'].repositoryToken" -o tsv)
+          if [ -z "$token" ]; then
+            echo "::error::Static Web App not found or deployment token unavailable"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "deployment_token=$token" >> $GITHUB_OUTPUT
+
+      - name: Get Static Web App URL
+        id: swa-url
+        run: |
+          url=$(az staticwebapp show -g ${{ env.RESOURCE_GROUP }} \
+            -n ${{ steps.env.outputs.app_name }} \
+            --query defaultHostname -o tsv)
+          if [ -z "$url" ]; then
+            echo "::warning::Could not retrieve Static Web App URL"
+          else
+            echo "app_url=https://${url}" >> $GITHUB_OUTPUT
+            echo "::notice::Static Web App URL: https://${url}"
+          fi
+
+      - name: Deploy to Static Web App
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.deployment_token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: ${{ env.APP_LOCATION }}
+          output_location: ${{ env.OUTPUT_LOCATION }}
+          skip_app_build: true
+
+      - name: Generate deployment summary
+        if: always()
+        run: |
+          echo "## �배 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ steps.env.outputs.env_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Resource Group** | ${{ env.RESOURCE_GROUP }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **App Name** | ${{ steps.env.outputs.app_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **App URL** | ${{ steps.swa-url.outputs.app_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pages" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏠 [Home](${{ steps.swa-url.outputs.app_url }}/index.html)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🚀 [Artemis II Mission](${{ steps.swa-url.outputs.app_url }}/artemis.html)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Output deployment URL
+        run: |
+          echo "✅ Website deployed successfully!"
+          echo ""
+          echo "URL: ${{ steps.swa-url.outputs.app_url }}"
+          echo ""
+          echo "Pages:"
+          echo "  - Home: ${{ steps.swa-url.outputs.app_url }}/index.html"
+          echo "  - Artemis II: ${{ steps.swa-url.outputs.app_url }}/artemis.html"
