@@ -165,27 +165,68 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Ensure Static Web App exists
+      - name: Ensure Static Web App exists with GitHub source
+        id: ensure-swa
         run: |
           APP_NAME="${{ needs.check-infrastructure.outputs.app_name }}"
           RG="${{ env.RESOURCE_GROUP }}"
 
-          echo "🔍 Checking if Static Web App exists..."
-          SWA_COUNT=$(az staticwebapp list -g "$RG" --query "[?name=='$APP_NAME'] | length(@)" -o tsv)
+          echo "🔍 Checking Static Web App configuration..."
 
-          if [ "$SWA_COUNT" -eq 0 ]; then
-            echo "📝 Creating Static Web App: $APP_NAME"
+          # Check if Static Web App exists
+          SWA=$(az staticwebapp show -g "$RG" -n "$APP_NAME" -o json 2>/dev/null || echo "")
+
+          if [ -z "$SWA" ]; then
+            echo "📝 Creating Static Web App with GitHub source..."
             az staticwebapp create \
               --name "$APP_NAME" \
               --resource-group "$RG" \
               --location "${{ env.AZURE_LOCATION }}" \
-              --sku Free || true
+              --sku Free \
+              --source "https://github.com/${{ github.repository }}" \
+              --branch "main" \
+              --app-location "AAUG Website App" \
+              --output-location "." \
+              --token "${{ secrets.GITHUB_TOKEN }}" || true
 
             echo "⏳ Waiting for Static Web App to be ready..."
-            sleep 10
+            sleep 15
           else
-            echo "✅ Static Web App exists: $APP_NAME"
+            # Check if it has GitHub source
+            PROVIDER=$(echo "$SWA" | jq -r '.provider' 2>/dev/null || echo "None")
+
+            if [ "$PROVIDER" != "GitHub" ]; then
+              echo "⚠️  Static Web App exists but is not connected to GitHub"
+              echo "🗑️  Deleting old Static Web App..."
+
+              az staticwebapp delete \
+                --name "$APP_NAME" \
+                --resource-group "$RG" \
+                --yes 2>/dev/null || true
+
+              echo "⏳ Waiting for deletion..."
+              sleep 10
+
+              echo "📝 Creating new Static Web App with GitHub source..."
+              az staticwebapp create \
+                --name "$APP_NAME" \
+                --resource-group "$RG" \
+                --location "${{ env.AZURE_LOCATION }}" \
+                --sku Free \
+                --source "https://github.com/${{ github.repository }}" \
+                --branch "main" \
+                --app-location "AAUG Website App" \
+                --output-location "." \
+                --token "${{ secrets.GITHUB_TOKEN }}" || true
+
+              echo "⏳ Waiting for new Static Web App to be ready..."
+              sleep 15
+            else
+              echo "✅ Static Web App found with GitHub source"
+            fi
           fi
+
+          echo "swa_ready=true" >> $GITHUB_OUTPUT
 
       - name: Get Static Web App URL
         id: swa-url
@@ -206,54 +247,49 @@ jobs:
             echo "⚠️  Using expected URL: https://$DEFAULT_URL"
           fi
 
-      - name: Deploy website using zip
+      - name: Get deployment token
         id: deploy
         run: |
           APP_NAME="${{ needs.check-infrastructure.outputs.app_name }}"
           RG="${{ env.RESOURCE_GROUP }}"
-          RESOURCE_ID="/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$APP_NAME"
 
-          echo "📦 Preparing deployment package..."
+          echo "🔑 Retrieving deployment token..."
 
-          # Create zip of website files
-          cd "${{ env.APP_LOCATION }}"
-          zip -r -q /tmp/deploy.zip . -x "*.git*" "*.github*" "node_modules/*"
-          cd - > /dev/null
+          max_attempts=5
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "  Attempt $attempt/$max_attempts..."
 
-          echo "✅ Zip created ($(du -h /tmp/deploy.zip | cut -f1))"
+            TOKEN=$(az staticwebapp list -g "$RG" \
+              --query "[?name=='$APP_NAME'].repositoryToken" -o tsv 2>/dev/null | grep -v '^$' | head -1)
 
-          echo ""
-          echo "📤 Uploading to Static Web App..."
-
-          # Get upload URL from API
-          UPLOAD_RESPONSE=$(az rest --method post \
-            --url "$RESOURCE_ID/getStaticSiteUploadUrl?api-version=2021-02-01" \
-            --body '{}' 2>/dev/null || echo "")
-
-          if [ -n "$UPLOAD_RESPONSE" ]; then
-            UPLOAD_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.url' 2>/dev/null || echo "")
-
-            if [ -n "$UPLOAD_URL" ] && [ "$UPLOAD_URL" != "null" ]; then
-              echo "✅ Got upload URL"
-
-              # Upload zip file
-              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-                -X POST \
-                -H "Content-Type: application/zip" \
-                --data-binary @/tmp/deploy.zip \
-                "$UPLOAD_URL")
-
-              echo "Upload response: HTTP $HTTP_CODE"
-
-              if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-                echo "✅ Files uploaded successfully"
-              else
-                echo "⚠️  Upload returned HTTP $HTTP_CODE (deployment may still proceed)"
-              fi
+            if [ -n "$TOKEN" ] && [ "$TOKEN" != "None" ] && [ "$TOKEN" != "null" ]; then
+              echo "  ✅ Token retrieved"
+              echo "::add-mask::$TOKEN"
+              echo "deployment_token=$TOKEN" >> $GITHUB_OUTPUT
+              exit 0
             fi
-          fi
 
-          echo "✅ Deployment initiated"
+            if [ $attempt -lt $max_attempts ]; then
+              echo "  ⏳ Waiting 10 seconds..."
+              sleep 10
+            fi
+
+            ((attempt++))
+          done
+
+          echo "❌ Failed to retrieve deployment token"
+          exit 1
+
+      - name: Deploy with Azure Static Web Apps action
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.deploy.outputs.deployment_token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: ${{ env.APP_LOCATION }}
+          output_location: ${{ env.OUTPUT_LOCATION }}
+          skip_app_build: true
 
       - name: Verify deployment
         run: |
