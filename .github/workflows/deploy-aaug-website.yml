@@ -29,7 +29,7 @@ concurrency:
 env:
   RESOURCE_GROUP: 'rg-aaug-website'
   # SWA Free tier is not available in australiaeast — eastasia is nearest supported region
-  AZURE_LOCATION: 'eastasia'
+  AZURE_LOCATION: 'southeastasia'  # Singapore — nearest SWA-supported region to Adelaide
 
 jobs:
   # ── Job 1: Validate HTML ────────────────────────────────────
@@ -98,20 +98,36 @@ jobs:
             echo "Resource group created"
           fi
 
-      - name: Create Static Web App if needed
+      - name: Create Static Web App if needed (migrate region if wrong)
         id: swa
         run: |
           APP_NAME="${{ steps.vars.outputs.app_name }}"
           RG="${{ env.RESOURCE_GROUP }}"
+          TARGET_LOCATION="${{ env.AZURE_LOCATION }}"
 
+          # Check if SWA exists and if it is in the correct region
           if az staticwebapp show -g "$RG" -n "$APP_NAME" &>/dev/null; then
-            echo "Static Web App already exists: $APP_NAME"
-          else
-            echo "Creating Static Web App: $APP_NAME"
+            CURRENT_LOC=$(az staticwebapp show -g "$RG" -n "$APP_NAME" \
+              --query location -o tsv 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+            TARGET_LOC=$(echo "$TARGET_LOCATION" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+
+            if [ "$CURRENT_LOC" != "$TARGET_LOC" ]; then
+              echo "SWA exists but is in wrong region: $CURRENT_LOC (want $TARGET_LOC)"
+              echo "Deleting and recreating in correct region..."
+              az staticwebapp delete -g "$RG" -n "$APP_NAME" --yes
+              echo "Waiting 15s for deletion to complete..."
+              sleep 15
+            else
+              echo "Static Web App exists in correct region ($CURRENT_LOC): $APP_NAME"
+            fi
+          fi
+
+          if ! az staticwebapp show -g "$RG" -n "$APP_NAME" &>/dev/null; then
+            echo "Creating Static Web App in $TARGET_LOCATION: $APP_NAME"
             az staticwebapp create \
               --name           "$APP_NAME" \
               --resource-group "$RG" \
-              --location       "${{ env.AZURE_LOCATION }}" \
+              --location       "$TARGET_LOCATION" \
               --sku            Free
             echo "Static Web App created - waiting 20s for provisioning..."
             sleep 20

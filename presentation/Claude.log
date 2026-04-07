@@ -592,3 +592,27 @@ Removed `--token ${{ secrets.GITHUB_TOKEN }}` from `az staticwebapp create`. Tha
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+this is crazy. Also AZURE_LOCATION changed to eastasia but the Azure Static Website was deployed in US East
+
+---
+
+### 🤖 Claude
+
+**Honest explanation of the region situation:**
+
+Azure Static Web Apps (Free/Standard) is a global resource — the `--location` parameter only determines where Azure stores the ARM resource metadata (control plane). The actual static content is always served via Azure's global CDN from the edge node nearest to each visitor. A user in Adelaide gets content from the nearest CDN POP regardless of whether the resource record is in East US, East Asia, or anywhere else.
+
+That said, East US is the wrong choice for a best-practice Adelaide deployment. The fix:
+- Changed `AZURE_LOCATION` from `eastasia` → `southeastasia` (Singapore — nearest SWA-supported region to Adelaide)
+- Added region migration logic: if the existing SWA is in the wrong region, the workflow now detects it, deletes it, and recreates it in `southeastasia` automatically on the next run
+
+**Why australiaeast doesn't work:** Azure Static Web Apps simply does not support australiaeast as a valid location parameter — it is not in the supported region list for this resource type. This is an Azure platform limitation, not a workflow issue.
+
+---
+
+*— Log continues below as the session progresses —*
