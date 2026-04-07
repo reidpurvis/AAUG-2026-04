@@ -29,7 +29,7 @@ concurrency:
 env:
   RESOURCE_GROUP: 'rg-aaug-website'
   # SWA Free tier is not available in australiaeast — eastasia is nearest supported region
-  AZURE_LOCATION: 'southeastasia'  # Singapore — nearest SWA-supported region to Adelaide
+  AZURE_LOCATION: 'eastasia'  # East Asia (Hong Kong) — nearest valid SWA region to Adelaide
 
 jobs:
   # ── Job 1: Validate HTML ────────────────────────────────────

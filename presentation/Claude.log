@@ -640,3 +640,21 @@ Azure Static Web Apps requires this file to serve `.html` pages correctly. Witho
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+please fix this error: LocationNotAvailableForResourceType — southeastasia is not available for Microsoft.Web/staticSites. List of available regions: westus2,centralus,eastus2,westeurope,eastasia
+
+---
+
+### 🤖 Claude
+
+Fixed. The Azure error message itself listed the exact valid regions: `westus2`, `centralus`, `eastus2`, `westeurope`, `eastasia`. Changed `AZURE_LOCATION` from `southeastasia` → `eastasia` (East Asia / Hong Kong — the nearest valid SWA region to Adelaide).
+
+As noted previously, this location is just the ARM control-plane metadata region — SWA content is served globally via CDN regardless.
+
+---
+
+*— Log continues below as the session progresses —*
