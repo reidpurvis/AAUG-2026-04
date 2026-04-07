@@ -23,4 +23,5 @@
 
 # Re-include the README and this file
 !README.md
+!DEPLOYMENT_GUIDE.md
 !.gitignore
