@@ -1,6 +1,7 @@
 // ============================================================
 // modules/staticWebApp.bicep
-// Azure Static Web Apps resource with GitHub integration
+// Azure Static Web Apps resource
+// Valid SWA locations: westus2, centralus, eastus2, westeurope, eastasia
 // ============================================================
 
 @description('Static Web App name')
@@ -8,7 +9,7 @@
 @maxLength(60)
 param name string
 
-@description('Azure region')
+@description('Azure region — must be one of: westus2, centralus, eastus2, westeurope, eastasia')
 param location string
 
 @description('Resource tags')
@@ -40,7 +41,7 @@ param apiLocation string = ''
 @description('Output location for build artifacts')
 param outputLocation string = '.'
 
-// ── Static Web App ────────────────────────────────────────────
+// ── Static Web App ─────────────────────────────────────────────
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   name: name
   location: location
@@ -59,20 +60,16 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
       outputLocation: outputLocation
       skipGithubActionWorkflowGeneration: true
     }
-    allowConfigFileUpdates: false
+    allowConfigFileUpdates: true
     stagingEnvironmentPolicy: 'Enabled'
     enterpriseGradeCdnStatus: skuTier == 'Standard' ? 'Enabled' : 'Disabled'
   }
 }
 
-// ── Outputs ───────────────────────────────────────────────────
+// ── Outputs ────────────────────────────────────────────────────
+// Use apiKey (not repositoryToken) as the deployment credential
+// for azure/static-web-apps-deploy@v1 and az staticwebapp secrets list
 output staticWebAppId string = staticWebApp.id
 output staticWebAppName string = staticWebApp.name
 output defaultHostName string = staticWebApp.properties.defaultHostname
-output repositoryToken string = staticWebApp.listSecrets().repositoryToken
-
-
-// ── Outputs ───────────────────────────────────────────────────
-output staticWebAppId string = staticWebApp.id
-output staticWebAppName string = staticWebApp.name
-output defaultHostName string = staticWebApp.properties.defaultHostname
+output apiKey string = staticWebApp.listSecrets().apiKey

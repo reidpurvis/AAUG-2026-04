@@ -11,7 +11,7 @@ targetScope = 'subscription'
 param environmentName string
 
 @description('Azure region for all resources')
-param location string = 'eastus2'
+param location string = 'eastasia'
 
 @description('Project / workload name')
 param projectName string = 'aaug'

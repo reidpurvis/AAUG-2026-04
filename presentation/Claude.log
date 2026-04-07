@@ -658,3 +658,30 @@ As noted previously, this location is just the ARM control-plane metadata region
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+please fix the scripts under the "AAUG Website Infra" folder to deploy the Azure Static Website to "eastasia"
+
+---
+
+### 🤖 Claude
+
+Fixed all location references across the AAUG Website Infra folder. Changes made:
+
+**`parameters/parameters.dev.json`** — `location` value: `eastus2` → `eastasia`
+**`parameters/parameters.prod.json`** — `location` value: `eastus2` → `eastasia`
+**`parameters/parameters.staging.json`** — `location` value: `eastus2` → `eastasia`
+**`main.bicep`** — default parameter: `param location string = 'eastus2'` → `'eastasia'`
+**`scripts/deploy.sh`** — `--location australiaeast` → `--location eastasia`
+
+**`modules/staticWebApp.bicep`** — two bugs also fixed here:
+1. Duplicate `// ── Outputs ──` block removed (would cause Bicep compile error)
+2. Output changed from `repositoryToken` (GitHub PAT, unrelated to deployment) → `apiKey` (`staticWebApp.listSecrets().apiKey` — the actual deployment credential)
+3. Added comment noting valid SWA locations in the file header
+
+---
+
+*— Log continues below as the session progresses —*

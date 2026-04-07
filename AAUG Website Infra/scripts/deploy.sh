@@ -103,7 +103,7 @@ deploy() {
     log_info "Starting deployment..."
 
     az deployment sub create \
-        --location australiaeast \
+        --location eastasia \
         --template-file "$BICEP_FILE" \
         --parameters "@$PARAMETERS_FILE" \
         $VERBOSE_FLAG
