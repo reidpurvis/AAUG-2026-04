@@ -210,15 +210,47 @@ jobs:
             sleep 15
           fi
 
-          # Try to retrieve deployment token
-          max_attempts=5
+          # Check if app is connected to GitHub
+          echo "🔍 Checking GitHub connection..."
+          PROVIDER=$(az staticwebapp show -g "$RG" -n "$APP_NAME" --query "provider" -o tsv 2>/dev/null || echo "None")
+
+          if [ "$PROVIDER" = "None" ] || [ -z "$PROVIDER" ]; then
+            echo "⚠️  Static Web App is not connected to GitHub (Provider: $PROVIDER)"
+            echo "🔗 Linking GitHub repository..."
+
+            # Link the GitHub repository
+            az staticwebapp linked-backends update \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --source "https://github.com/${{ github.repository }}" \
+              --branch "main" \
+              --app-location "AAUG Website App" \
+              --output-location "." \
+              --token "${{ secrets.GITHUB_TOKEN }}" 2>/dev/null || \
+
+            # Alternative: Use update-build-info to reconnect
+            az staticwebapp update \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --source "https://github.com/${{ github.repository }}" \
+              --branch "main" \
+              --app-location "AAUG Website App" \
+              --output-location "." \
+              --token "${{ secrets.GITHUB_TOKEN }}" 2>/dev/null || true
+
+            echo "⏳ Waiting for GitHub connection to be established..."
+            sleep 20
+          fi
+
+          # Try to retrieve deployment token with multiple methods
+          max_attempts=6
           attempt=1
           while [ $attempt -le $max_attempts ]; do
             echo "🔄 Attempt $attempt/$max_attempts to retrieve token..."
 
-            # Method 1: Query from list
+            # Method 1: Query from list (most reliable)
             token=$(az staticwebapp list -g "$RG" \
-              --query "[?name=='$APP_NAME'].repositoryToken" -o tsv 2>/dev/null | head -1)
+              --query "[?name=='$APP_NAME'].repositoryToken" -o tsv 2>/dev/null | grep -v '^$' | head -1)
 
             # Method 2: If list fails, try show command
             if [ -z "$token" ]; then
@@ -226,24 +258,52 @@ jobs:
                 --query "repositoryToken" -o tsv 2>/dev/null || echo "")
             fi
 
-            # Method 3: If still no token, try secrets endpoint
+            # Method 3: Try properties path
             if [ -z "$token" ]; then
-              token=$(az rest --method post \
-                --url "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$APP_NAME/listSecrets?api-version=2023-01-01" \
+              token=$(az staticwebapp show -g "$RG" -n "$APP_NAME" \
                 --query "properties.repositoryToken" -o tsv 2>/dev/null || echo "")
             fi
 
-            if [ -n "$token" ] && [ "$token" != "None" ] && [ "$token" != "" ]; then
+            # Method 4: REST API approach
+            if [ -z "$token" ]; then
+              token=$(az rest --method get \
+                --url "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$APP_NAME?api-version=2023-01-01" \
+                --query "properties.repositoryToken" -o tsv 2>/dev/null || echo "")
+            fi
+
+            # Validate token
+            if [ -n "$token" ] && [ "$token" != "None" ] && [ "$token" != "null" ] && [ "$token" != "" ]; then
               echo "✅ Deployment token retrieved successfully!"
               echo "::add-mask::$token"
               echo "deployment_token=$token" >> $GITHUB_OUTPUT
               exit 0
             fi
 
-            echo "⏳ Token not available yet, retrying in 10 seconds... (attempt $attempt/$max_attempts)"
-            sleep 10
+            if [ $attempt -lt $max_attempts ]; then
+              echo "⏳ Token not available yet, retrying in 15 seconds... (attempt $attempt/$max_attempts)"
+              sleep 15
+            fi
+
             ((attempt++))
           done
+
+          # If we still don't have a token, try generating one via Azure Static Web Apps API
+          echo "📝 Attempting alternative token generation..."
+
+          # Try to get secrets which may include the repo token
+          SECRET_RESULT=$(az rest --method post \
+            --url "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$APP_NAME/listSecrets?api-version=2023-01-01" \
+            2>/dev/null || echo "")
+
+          if [ -n "$SECRET_RESULT" ]; then
+            token=$(echo "$SECRET_RESULT" | grep -o '"repositoryToken":"[^"]*"' | cut -d'"' -f4 || echo "")
+            if [ -n "$token" ] && [ "$token" != "None" ]; then
+              echo "✅ Token generated via secrets API!"
+              echo "::add-mask::$token"
+              echo "deployment_token=$token" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
 
           echo ""
           echo "❌ Failed to retrieve deployment token after $max_attempts attempts"
@@ -253,16 +313,20 @@ jobs:
           echo "  App Name: $APP_NAME"
           echo "  Subscription ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           echo ""
-          echo "📋 Static Web Apps in resource group:"
-          az staticwebapp list -g "$RG" -o table 2>/dev/null || echo "  (none found)"
+          echo "📋 Static Web App Details:"
+          az staticwebapp show -g "$RG" -n "$APP_NAME" -o json 2>/dev/null | \
+            jq '{name: .name, location: .location, provider: .provider, resourceGroup: .resourceGroup}' || \
+            az staticwebapp show -g "$RG" -n "$APP_NAME" -o table 2>/dev/null || echo "  (unable to retrieve)"
           echo ""
           echo "🔧 Troubleshooting steps:"
-          echo "  1. Verify resource group exists:"
-          echo "     az group show -n $RG"
-          echo "  2. Verify Static Web App exists:"
-          echo "     az staticwebapp show -g $RG -n $APP_NAME"
-          echo "  3. Check permissions:"
-          echo "     az role assignment list --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG"
+          echo "  1. Verify Static Web App is linked to GitHub:"
+          echo "     az staticwebapp show -g $RG -n $APP_NAME --query provider"
+          echo "  2. Check repository access:"
+          echo "     gh repo view"
+          echo "  3. Manually link repository:"
+          echo "     az staticwebapp update -g $RG -n $APP_NAME \\"
+          echo "       --source https://github.com/${{ github.repository }} \\"
+          echo "       --branch main --token ${{ secrets.GITHUB_TOKEN }}"
           echo ""
           exit 1
 
