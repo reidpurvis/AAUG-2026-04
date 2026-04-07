@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adelaide Azure User Group — April 2026</title>
+  <style>
+    :root {
+      --teal:   #1C8F94;
+      --green:  #259D77;
+      --blue:   #008BFE;
+      --navy:   #1A1A2E;
+      --white:  #FFFFFF;
+      --light:  #F4FBFB;
+      --muted:  #555E6C;
+      --border: #D8EEF0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--light);
+      color: var(--navy);
+      line-height: 1.6;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--navy);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 14px;
+    }
+    .nav-brand span { color: white; font-size: 15px; font-weight: 600; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color .2s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+    .nav-links a.active { color: var(--teal); }
+
+    /* ── Hero ── */
+    .hero {
+      background: var(--navy);
+      padding: 80px 2rem 70px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 300px at 20% 50%, rgba(28,143,148,0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 300px at 80% 50%, rgba(0,139,254,0.12) 0%, transparent 70%);
+    }
+    .hero-tag {
+      display: inline-block;
+      background: rgba(28,143,148,0.2);
+      border: 1px solid rgba(28,143,148,0.4);
+      color: #5DCAA5;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      color: white;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .hero h1 span { color: var(--teal); }
+    .hero p {
+      color: rgba(255,255,255,0.65);
+      font-size: 1.1rem;
+      max-width: 560px;
+      margin: 0 auto 36px;
+      position: relative;
+    }
+    .hero-date {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 20px;
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+      position: relative;
+    }
+    .hero-date strong { color: white; }
+    .live-dot {
+      width: 8px; height: 8px;
+      background: #5DCAA5;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(1.3); }
+    }
+
+    /* ── Main content ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 60px 2rem; }
+
+    /* ── Section headings ── */
+    .section-head {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .section-head h2 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+    .section-head p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Agenda cards ── */
+    .agenda-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 64px;
+    }
+    .agenda-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .agenda-card:hover {
+      box-shadow: 0 8px 24px rgba(28,143,148,0.1);
+      transform: translateY(-2px);
+    }
+    .agenda-time {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+    .agenda-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .agenda-desc {
+      font-size: .875rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .agenda-tag {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .tag-keynote { background: #E8F7F4; color: #0F6E56; }
+    .tag-demo    { background: #E8F4FF; color: #0C447C; }
+    .tag-break   { background: #F5F5F5; color: #666; }
+    .tag-panel   { background: #FEF3E8; color: #7A4100; }
+    .tag-network { background: #F0EBF9; color: #5B2D9E; }
+
+    /* ── Featured talk ── */
+    .featured {
+      background: var(--navy);
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 64px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 32px;
+      align-items: center;
+    }
+    .featured-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 12px;
+    }
+    .featured h3 {
+      font-size: 1.6rem;
+      color: white;
+      font-weight: 700;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+    .featured p { color: rgba(255,255,255,0.65); font-size: .95rem; }
+    .featured-cta {
+      background: var(--teal);
+      color: white;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      transition: background .2s;
+    }
+    .featured-cta:hover { background: #15787C; }
+
+    /* ── Venue / logistics ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+    .info-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .info-icon {
+      width: 40px; height: 40px;
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+    .info-card h4 {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 4px;
+    }
+    .info-card p {
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .info-card span {
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    /* ── Artemis promo banner ── */
+    .artemis-banner {
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0d1a3a 100%);
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 64px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 32px;
+      align-items: center;
+      border: 1px solid rgba(0,139,254,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    .artemis-banner::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(0,139,254,0.15), transparent 70%);
+      border-radius: 50%;
+    }
+    .artemis-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .live-badge {
+      background: rgba(239,68,68,0.2);
+      border: 1px solid rgba(239,68,68,0.4);
+      color: #f87171;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+    .artemis-banner h3 {
+      font-size: 1.5rem;
+      color: white;
+      font-weight: 700;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .artemis-banner p {
+      color: rgba(255,255,255,0.6);
+      font-size: .9rem;
+      position: relative;
+    }
+    .artemis-cta {
+      background: var(--blue);
+      color: white;
+      text-decoration: none;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      transition: opacity .2s;
+      position: relative;
+    }
+    .artemis-cta:hover { opacity: .85; }
+
+    /* ── Sponsors ── */
+    .sponsors {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .sponsors h3 {
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .sponsors-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .sponsor-pill {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 22px;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--navy);
+    }
+    .sponsor-pill.ms { color: #00a4ef; }
+    .sponsor-pill.cp { color: var(--teal); }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--navy);
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      padding: 32px 2rem;
+      font-size: 13px;
+    }
+    footer a { color: var(--teal); text-decoration: none; }
+    footer strong { color: rgba(255,255,255,0.8); }
+
+    @media (max-width: 680px) {
+      .featured, .artemis-banner { grid-template-columns: 1fr; }
+      .featured-cta, .artemis-cta { display: inline-block; margin-top: 16px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="index.html">
+    <div class="nav-logo">A</div>
+    <span>Adelaide Azure User Group</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="active">Home</a>
+    <a href="artemis.html">Artemis II</a>
+    <a href="https://www.meetup.com/" target="_blank">Meetup</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-tag">Monthly Meetup — April 2026</div>
+  <h1>Welcome to <span>AAUG</span><br>April 2026</h1>
+  <p>Adelaide's community for Azure practitioners, architects, and cloud enthusiasts. Tonight we explore the frontier of Agentic AI on Azure.</p>
+  <div class="hero-date">
+    <div class="live-dot"></div>
+    <span><strong>Tuesday 7 April 2026</strong> &nbsp;·&nbsp; 6:00 PM ACST &nbsp;·&nbsp; Adelaide CBD</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Logistics -->
+  <section style="margin-bottom:64px">
+    <div class="section-head">
+      <h2>Tonight at a Glance</h2>
+      <p>Everything you need to know about this evening's event</p>
+    </div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-icon">📅</div>
+        <h4>Date</h4>
+        <p>Tuesday, 7 April 2026</p>
+        <span>Monthly meetup</span>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">⏰</div>
+        <h4>Time</h4>
+        <p>6:00 PM – 9:00 PM</p>
+        <span>ACST (UTC+9:30)</span>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">📍</div>
+        <h4>Venue</h4>
+        <p>Microsoft Adelaide</p>
+        <span>Level 9, 26 Flinders St, Adelaide SA 5000</span>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">🍕</div>
+        <h4>Catering</h4>
+        <p>Pizza & Drinks Provided</p>
+        <span>Sponsored by Cloud Paradigm</span>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">🎟️</div>
+        <h4>Entry</h4>
+        <p>Free to Attend</p>
+        <span>Registration via Meetup</span>
+      </div>
+      <div class="info-card">
+        <div class="info-icon">📡</div>
+        <h4>Live Stream</h4>
+        <p>YouTube Live</p>
+        <span>Link in Meetup event</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured talk -->
+  <div class="featured">
+    <div>
+      <div class="featured-label">⭐ Featured Presentation</div>
+      <h3>Infrastructure is Dead — Long Live Infrastructure in the Age of Agentic AI</h3>
+      <p>Reid Purvis, Owner & Principal at Cloud Paradigm Pty Ltd, explores how Agentic AI is fundamentally transforming how enterprise Azure environments are architected, deployed, and managed.</p>
+    </div>
+    <a class="featured-cta" href="#agenda">View Full Agenda →</a>
+  </div>
+
+  <!-- Agenda -->
+  <section id="agenda">
+    <div class="section-head">
+      <h2>Tonight's Agenda</h2>
+      <p>A packed evening of talks, demos, and discussion</p>
+    </div>
+    <div class="agenda-grid">
+      <div class="agenda-card">
+        <div class="agenda-time">6:00 PM</div>
+        <div class="agenda-title">Welcome & Networking</div>
+        <div class="agenda-desc">Arrive, grab a drink, catch up with the community. Perfect time to meet new members and reconnect with familiar faces.</div>
+        <span class="agenda-tag tag-network">Networking</span>
+      </div>
+      <div class="agenda-card">
+        <div class="agenda-time">6:30 PM</div>
+        <div class="agenda-title">Opening & Group Updates</div>
+        <div class="agenda-desc">Quick announcements, upcoming events, Azure news roundup, and community shout-outs.</div>
+        <span class="agenda-tag tag-break">Housekeeping</span>
+      </div>
+      <div class="agenda-card">
+        <div class="agenda-time">6:45 PM</div>
+        <div class="agenda-title">Infrastructure is Dead — Long Live Infrastructure</div>
+        <div class="agenda-desc">Reid Purvis explores how Agentic AI is reshaping cloud infrastructure — from intent-driven provisioning to self-healing architectures. Includes audience polls and a live demo.</div>
+        <span class="agenda-tag tag-keynote">Keynote</span>
+      </div>
+      <div class="agenda-card">
+        <div class="agenda-time">7:30 PM</div>
+        <div class="agenda-title">Live Demo — Agent Provisioning Azure from a Prompt</div>
+        <div class="agenda-desc">Watch an AI agent spin up an Azure Landing Zone using natural language, GitHub Codespaces, and Bicep templates — the exact architecture built for tonight's talk.</div>
+        <span class="agenda-tag tag-demo">Live Demo</span>
+      </div>
+      <div class="agenda-card">
+        <div class="agenda-time">8:00 PM</div>
+        <div class="agenda-title">Pizza Break & Q&A</div>
+        <div class="agenda-desc">Grab a slice and fire your questions at the speakers. Informal discussion, networking, and a chance to dig deeper on any topic from the evening.</div>
+        <span class="agenda-tag tag-break">Break</span>
+      </div>
+      <div class="agenda-card">
+        <div class="agenda-time">8:30 PM</div>
+        <div class="agenda-title">Artemis II — Cloud & AI in Deep Space</div>
+        <div class="agenda-desc">A special lightning talk on how NASA's Artemis II crew (currently in space — day 7!) uses AI and cloud infrastructure for mission-critical operations. Connection to tonight's theme.</div>
+        <span class="agenda-tag tag-panel">Lightning Talk</span>
+      </div>
+      <div class="agenda-card">
+        <div class="agenda-time">9:00 PM</div>
+        <div class="agenda-title">Close & Open Networking</div>
+        <div class="agenda-desc">Wrap-up, community survey, and open networking. The venue is ours until 9:30 PM — stay and chat!</div>
+        <span class="agenda-tag tag-network">Networking</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Artemis banner -->
+  <div class="artemis-banner">
+    <div>
+      <div class="artemis-label">
+        🚀 Mission Update
+        <span class="live-badge">LIVE IN SPACE</span>
+      </div>
+      <h3>Artemis II — Day 7 en route home</h3>
+      <p>Launched April 1, 2026. Four astronauts completed their historic lunar flyby yesterday (April 6) and are now heading back to Earth. The first humans beyond low Earth orbit since Apollo 17 in 1972 — and tonight we'll hear how AI and cloud infrastructure supports missions like this.</p>
+    </div>
+    <a class="artemis-cta" href="artemis.html">Mission Details →</a>
+  </div>
+
+  <!-- Sponsors -->
+  <div class="sponsors">
+    <h3>Tonight's Event Supported By</h3>
+    <div class="sponsors-row">
+      <div class="sponsor-pill ms">Microsoft Azure</div>
+      <div class="sponsor-pill cp">Cloud Paradigm Pty Ltd</div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p><strong>Adelaide Azure User Group</strong> &nbsp;·&nbsp; Connecting Azure practitioners across South Australia</p>
+  <p style="margin-top:8px">
+    <a href="https://www.meetup.com/" target="_blank">Meetup</a> &nbsp;·&nbsp;
+    <a href="https://www.linkedin.com/" target="_blank">LinkedIn</a> &nbsp;·&nbsp;
+    <a href="artemis.html">Artemis II Mission</a>
+  </p>
+  <p style="margin-top:12px">© 2026 Adelaide Azure User Group · Proudly supported by <a href="https://cloudparadigm.com.au" target="_blank">Cloud Paradigm Pty Ltd</a></p>
+</footer>
+
+</body>
+</html>

@@ -525,3 +525,41 @@ Fix: pre-expanded the service endpoint objects directly in the `subnets` variabl
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+within my github repo, create a new folder called "AAUG Website App" and in that create a static website for the Adelaide Azure User Group with a website that welcomes users to today (April 7th, 2026) meeting. Also provide a website that discusses the Artemis 2 mission
+
+---
+
+### 🤖 Claude
+
+Searched NASA sources for live Artemis II mission status (day 7, crew completed lunar flyby on April 6, heading home) then built a two-page static website.
+
+**Files created in `AAUG Website App/`:**
+
+`index.html` — AAUG meeting welcome page:
+- Dark navy/teal Cloud Paradigm-aligned design
+- Hero banner welcoming members to the April 7 meeting
+- Logistics cards (date, time, venue, catering, entry, livestream)
+- Full 7-item agenda with time slots and category badges
+- Featured presentation callout for Reid's talk
+- Artemis II live banner linking to the second page
+- Sponsors row (Microsoft Azure + Cloud Paradigm)
+
+`artemis.html` — Artemis II mission page:
+- Full space-themed dark design with starfield background
+- Live mission status strip (Day 7, en route home, lunar flyby complete)
+- Mission overview with 6 key stats (695,081 miles total, 252,760 miles record)
+- Full crew cards: Reid Wiseman, Victor Glover, Christina Koch, Jeremy Hansen
+- 7-step mission timeline with done/active/pending states
+- "Cloud & AI in Deep Space" section connecting Artemis II to tonight's Agentic AI talk
+- All data sourced from NASA (launched April 1, flyby April 6, splashdown ~April 9-11)
+
+Both pages are fully linked to each other and include navigation bars. `.gitignore` updated to whitelist `AAUG Website App/`.
+
+---
+
+*— Log continues below as the session progresses —*

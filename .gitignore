@@ -17,6 +17,10 @@
 !.github/
 !.github/**
 
+# Re-include the AAUG website
+!AAUG Website App/
+!AAUG Website App/**
+
 # Re-include the README and this file
 !README.md
 !.gitignore

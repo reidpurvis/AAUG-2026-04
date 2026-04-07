@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artemis II Mission — AAUG April 2026</title>
+  <style>
+    :root {
+      --blue:   #008BFE;
+      --teal:   #1C8F94;
+      --green:  #259D77;
+      --navy:   #1A1A2E;
+      --space:  #080818;
+      --white:  #FFFFFF;
+      --light:  #F4FBFB;
+      --muted:  #555E6C;
+      --border: #D8EEF0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--space);
+      color: var(--white);
+      line-height: 1.6;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: rgba(8,8,24,0.95);
+      backdrop-filter: blur(10px);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 14px;
+    }
+    .nav-brand span { color: white; font-size: 15px; font-weight: 600; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: white; }
+    .nav-links a.active { color: #60a5fa; }
+
+    /* ── Stars background ── */
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 800px 400px at 30% 20%, rgba(0,139,254,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 600px 400px at 70% 70%, rgba(28,143,148,0.05) 0%, transparent 70%);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 90px 2rem 80px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .mission-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #f87171;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 5px 16px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      background: #f87171;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .3; }
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.15rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 600px;
+      margin: 0 auto 48px;
+    }
+
+    /* ── Status strip ── */
+    .status-strip {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 0;
+    }
+    .status-chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px 18px;
+      text-align: center;
+      min-width: 140px;
+    }
+    .status-chip .label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 4px;
+    }
+    .status-chip .value {
+      font-size: 15px;
+      font-weight: 700;
+      color: white;
+    }
+    .status-chip .value.green { color: #4ade80; }
+    .status-chip .value.blue  { color: #60a5fa; }
+    .status-chip .value.amber { color: #fbbf24; }
+
+    /* ── Main wrapper ── */
+    .page { position: relative; z-index: 1; }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 2rem 80px;
+    }
+
+    /* ── Section label ── */
+    .sec-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+    }
+    .sec-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 12px;
+    }
+    .sec-body {
+      color: rgba(255,255,255,0.6);
+      font-size: .95rem;
+      max-width: 680px;
+      line-height: 1.7;
+    }
+
+    /* ── Mission overview grid ── */
+    .overview-section {
+      margin-bottom: 72px;
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 32px;
+      align-items: start;
+    }
+    .overview-text p {
+      color: rgba(255,255,255,0.65);
+      font-size: .95rem;
+      line-height: 1.75;
+      margin-bottom: 16px;
+    }
+    .overview-text p:last-child { margin-bottom: 0; }
+    .highlight {
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .mission-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .stat-card .stat-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+    .stat-card .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: white;
+    }
+    .stat-card .stat-unit {
+      font-size: .75rem;
+      color: rgba(255,255,255,0.45);
+      margin-top: 2px;
+    }
+
+    /* ── Crew ── */
+    .crew-section { margin-bottom: 72px; }
+    .crew-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .crew-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      transition: border-color .2s, background .2s;
+    }
+    .crew-card:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(96,165,250,0.3);
+    }
+    .crew-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    .av-red    { background: linear-gradient(135deg,#7f1d1d,#dc2626); }
+    .av-blue   { background: linear-gradient(135deg,#1e3a8a,#3b82f6); }
+    .av-teal   { background: linear-gradient(135deg,#134e4a,#14b8a6); }
+    .av-green  { background: linear-gradient(135deg,#14532d,#22c55e); }
+    .crew-card h3 { font-size: 1rem; font-weight: 700; color: white; margin-bottom: 4px; }
+    .crew-card .role { font-size: .8rem; color: #60a5fa; font-weight: 600; margin-bottom: 8px; }
+    .crew-card .agency { font-size: .75rem; color: rgba(255,255,255,0.4); }
+    .crew-card .bio { font-size: .8rem; color: rgba(255,255,255,0.5); margin-top: 10px; line-height: 1.5; }
+
+    /* ── Timeline ── */
+    .timeline-section { margin-bottom: 72px; }
+    .timeline {
+      margin-top: 32px;
+      position: relative;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, #60a5fa, rgba(96,165,250,0.1));
+    }
+    .tl-item {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 28px;
+      align-items: flex-start;
+    }
+    .tl-dot {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .tl-dot.done    { background: #15803d; border: 2px solid #22c55e; }
+    .tl-dot.active  { background: #1d4ed8; border: 2px solid #60a5fa; animation: glow 2s infinite; }
+    .tl-dot.pending { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.15); }
+    @keyframes glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); }
+      50% { box-shadow: 0 0 0 6px rgba(96,165,250,0.2); }
+    }
+    .tl-content {
+      flex: 1;
+      padding-top: 4px;
+    }
+    .tl-date {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 4px;
+    }
+    .tl-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 4px;
+    }
+    .tl-desc {
+      font-size: .85rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+    }
+    .tl-active-label {
+      display: inline-block;
+      background: rgba(96,165,250,0.15);
+      border: 1px solid rgba(96,165,250,0.3);
+      color: #93c5fd;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 8px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* ── Connection to Azure ── */
+    .azure-section {
+      background: rgba(28,143,148,0.06);
+      border: 1px solid rgba(28,143,148,0.2);
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 72px;
+    }
+    .azure-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .azure-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .azure-card .icon {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    .azure-card h4 {
+      font-size: .9rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 6px;
+    }
+    .azure-card p {
+      font-size: .8rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+    }
+
+    /* ── Back CTA ── */
+    .back-cta {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: white;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background .2s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.1); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.3);
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      padding: 28px 2rem;
+      font-size: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    footer a { color: var(--teal); text-decoration: none; }
+    footer strong { color: rgba(255,255,255,0.6); }
+
+    @media (max-width: 680px) {
+      .overview-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<nav>
+  <a class="nav-brand" href="index.html">
+    <div class="nav-logo">A</div>
+    <span>Adelaide Azure User Group</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="artemis.html" class="active">Artemis II</a>
+    <a href="https://www.nasa.gov/missions/artemis/artemis-2/" target="_blank">NASA ↗</a>
+  </div>
+</nav>
+
+<div class="page">
+  <header class="hero">
+    <div class="mission-badge">
+      <div class="live-dot"></div>
+      Mission Active — Day 7
+    </div>
+    <h1>Artemis II</h1>
+    <p class="hero-sub">
+      Humanity's first crewed journey beyond low Earth orbit since 1972.
+      Four astronauts. 695,081 miles. One historic mission — happening right now.
+    </p>
+    <div class="status-strip">
+      <div class="status-chip">
+        <div class="label">Status</div>
+        <div class="value green">En Route Home</div>
+      </div>
+      <div class="status-chip">
+        <div class="label">Mission Day</div>
+        <div class="value blue">Day 7 of ~10</div>
+      </div>
+      <div class="status-chip">
+        <div class="label">Launched</div>
+        <div class="value">1 April 2026</div>
+      </div>
+      <div class="status-chip">
+        <div class="label">Lunar Flyby</div>
+        <div class="value green">Complete ✓</div>
+      </div>
+      <div class="status-chip">
+        <div class="label">Crew</div>
+        <div class="value">4 Astronauts</div>
+      </div>
+      <div class="status-chip">
+        <div class="label">Max Distance</div>
+        <div class="value amber">252,760 mi</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Overview -->
+    <section class="overview-section">
+      <div class="sec-label">Mission Overview</div>
+      <h2 class="sec-title">The First Crewed Lunar Mission in 54 Years</h2>
+      <div class="overview-grid">
+        <div class="overview-text">
+          <p>
+            NASA's <span class="highlight">Artemis II</span> is the first crewed test flight of the Orion spacecraft and Space Launch System (SLS), sending four astronauts on a <span class="highlight">~10-day journey around the Moon</span>. Launched on 1 April 2026, it is the first mission to send humans beyond low Earth orbit since Apollo 17 in December 1972.
+          </p>
+          <p>
+            The crew — Commander <span class="highlight">Reid Wiseman</span>, Pilot <span class="highlight">Victor Glover</span>, Mission Specialist <span class="highlight">Christina Koch</span> (NASA), and Mission Specialist <span class="highlight">Jeremy Hansen</span> (CSA) — are currently aboard the Orion spacecraft named <em>Integrity</em>, heading back to Earth after completing their historic lunar flyby on 6 April.
+          </p>
+          <p>
+            During the flyby, the crew surpassed the distance record set by Apollo 13 in 1970, travelling a maximum of <span class="highlight">252,760 miles from Earth</span> — approximately 4,105 miles further than any humans had previously ventured.
+          </p>
+          <p>
+            The mission is a test flight: validating Orion's life support systems, navigation, and deep-space communications with crew aboard for the first time — laying the groundwork for Artemis III, which aims to land humans on the lunar surface.
+          </p>
+        </div>
+        <div class="mission-stats">
+          <div class="stat-card">
+            <div class="stat-label">Total Mission Distance</div>
+            <div class="stat-value">695,081</div>
+            <div class="stat-unit">miles from launch to splashdown</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Mission Duration</div>
+            <div class="stat-value">~10</div>
+            <div class="stat-unit">days total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Closest Lunar Approach</div>
+            <div class="stat-value">4,070</div>
+            <div class="stat-unit">miles from lunar surface</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Distance Record</div>
+            <div class="stat-value">252,760</div>
+            <div class="stat-unit">miles from Earth (new record)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Onboard Cameras</div>
+            <div class="stat-value">32</div>
+            <div class="stat-unit">cameras and lens devices</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Orion Wingspan</div>
+            <div class="stat-value">63 ft</div>
+            <div class="stat-unit">solar arrays fully deployed</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Crew -->
+    <section class="crew-section">
+      <div class="sec-label">The Crew</div>
+      <h2 class="sec-title">Four Astronauts. One Historic Journey.</h2>
+      <p class="sec-body">The Artemis II crew represents a milestone in diversity and international partnership — including the first woman and first person of colour to travel to the vicinity of the Moon.</p>
+      <div class="crew-grid">
+        <div class="crew-card">
+          <div class="crew-avatar av-red">RW</div>
+          <h3>Reid Wiseman</h3>
+          <div class="role">Commander</div>
+          <div class="agency">NASA · United States</div>
+          <div class="bio">US Navy test pilot and veteran ISS commander. Selected as Artemis II commander in April 2023. Third spaceflight.</div>
+        </div>
+        <div class="crew-card">
+          <div class="crew-avatar av-blue">VG</div>
+          <h3>Victor Glover</h3>
+          <div class="role">Pilot</div>
+          <div class="agency">NASA · United States</div>
+          <div class="bio">US Navy pilot and former Crew Dragon mission pilot to the ISS. First Black astronaut to travel to the Moon's vicinity.</div>
+        </div>
+        <div class="crew-card">
+          <div class="crew-avatar av-teal">CK</div>
+          <h3>Christina Koch</h3>
+          <div class="role">Mission Specialist</div>
+          <div class="agency">NASA · United States</div>
+          <div class="bio">Electrical engineer and research associate who holds the record for the longest single spaceflight by a woman. First woman to travel to the Moon's vicinity.</div>
+        </div>
+        <div class="crew-card">
+          <div class="crew-avatar av-green">JH</div>
+          <h3>Jeremy Hansen</h3>
+          <div class="role">Mission Specialist</div>
+          <div class="agency">CSA · Canada</div>
+          <div class="bio">Royal Canadian Air Force fighter pilot. First Canadian to travel beyond low Earth orbit. First non-American to travel to the vicinity of the Moon.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Timeline -->
+    <section class="timeline-section">
+      <div class="sec-label">Mission Timeline</div>
+      <h2 class="sec-title">Where We Are Right Now</h2>
+      <p class="sec-body">Today is Day 7 — the crew completed their lunar flyby yesterday and are now heading back to Earth for splashdown.</p>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-date">1 April 2026 · 6:35 PM EDT</div>
+            <div class="tl-title">Liftoff — Kennedy Space Center LC-39B</div>
+            <div class="tl-desc">SLS rocket lifts off from Kennedy Space Center. Solar array wings deploy 49 minutes after launch. Successful translunar injection burn at ~7:49 PM EDT sends crew toward the Moon.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-date">2 April 2026 · Day 2</div>
+            <div class="tl-title">Translunar Injection & Orion Proximity Operations</div>
+            <div class="tl-desc">Crew demonstrates manual manoeuvring of Orion relative to the Interim Cryogenic Propulsion Stage. Enters high Earth orbit then begins trans-lunar coast.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-date">3–4 April 2026 · Days 3–4</div>
+            <div class="tl-title">En Route to Moon — Systems Checkout</div>
+            <div class="tl-desc">Crew checks life support systems, completes space adaptation activities, CPR demonstrations, and medical device checkouts. Christina Koch photographs Earth from Orion's window. "Rise" the zero-g mascot floats freely in the cabin.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-date">5 April 2026 · Day 5</div>
+            <div class="tl-title">Enters Moon's Gravitational Sphere of Influence</div>
+            <div class="tl-desc">Crew enters lunar gravitational sphere of influence. Suit demonstrations and final briefing from Mission Control covering flyby objectives and exact lunar lighting conditions.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-date">6 April 2026 · Day 6 — LUNAR FLYBY</div>
+            <div class="tl-title">Historic Lunar Flyby — Farthest Humans From Earth</div>
+            <div class="tl-desc">Crew passes within 4,070 miles of the lunar surface. Sets new human distance record at 252,760 miles from Earth — surpassing Apollo 13's 53-year-old record by 4,105 miles. Brief comms blackout during far-side pass. Crew photographs the Moon and Earth.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot active">→</div>
+          <div class="tl-content">
+            <div class="tl-date">7 April 2026 · Day 7 · TODAY</div>
+            <div class="tl-title">Return Journey — En Route to Earth</div>
+            <div class="tl-desc">Orion is using Earth's gravity in a free-return trajectory, pulling the spacecraft back toward Earth without requiring a major burn. Crew continues checkout activities and communications with Mission Control.</div>
+            <span class="tl-active-label">Current Status</span>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot pending">○</div>
+          <div class="tl-content">
+            <div class="tl-date">~9–11 April 2026 · Days 9–11</div>
+            <div class="tl-title">Re-entry & Splashdown — Pacific Ocean</div>
+            <div class="tl-desc">Orion performs a "skip reentry" manoeuvre — dipping into the atmosphere, skipping out, then re-entering for splashdown. Recovery off the coast of San Diego.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Azure / AI connection -->
+    <section class="azure-section">
+      <div class="sec-label">The Connection to Tonight's Talk</div>
+      <h2 class="sec-title">Cloud & AI in Deep Space</h2>
+      <p class="sec-body">Artemis II is a demonstration of what's possible when autonomous systems, real-time data processing, and human decision-making converge — exactly the themes of tonight's AAUG presentation on Agentic AI and Azure infrastructure.</p>
+      <div class="azure-grid">
+        <div class="azure-card">
+          <div class="icon">🛰️</div>
+          <h4>Mission Control on Azure</h4>
+          <p>NASA's Mission Control systems run on hybrid cloud infrastructure. Real-time telemetry from Orion's 32 cameras and sensors is processed and streamed continuously from deep space.</p>
+        </div>
+        <div class="azure-card">
+          <div class="icon">🤖</div>
+          <h4>Autonomous Systems</h4>
+          <p>Orion operates autonomously during communications blackouts — the same pattern as Agentic AI: perceive environment, execute against a goal, adapt based on feedback, with humans in the loop for key decisions.</p>
+        </div>
+        <div class="azure-card">
+          <div class="icon">🔒</div>
+          <h4>Fault Tolerance & Self-Healing</h4>
+          <p>When Orion's toilet reported a burning smell, Mission Control diagnosed it in real time using telemetry — the same self-healing, anomaly-detection patterns we're building with Azure Monitor and Agentic AI.</p>
+        </div>
+        <div class="azure-card">
+          <div class="icon">📡</div>
+          <h4>Infrastructure as Code in Space</h4>
+          <p>Orion's flight software is versioned, tested, and deployed with the same rigour as modern cloud infrastructure. The principle is identical: declarative, repeatable, auditable deployments.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Back button -->
+    <div class="back-cta">
+      <a class="back-btn" href="index.html">← Back to Tonight's Meeting</a>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>
+      <strong>Adelaide Azure User Group</strong> &nbsp;·&nbsp; April 2026 Meetup &nbsp;·&nbsp;
+      Mission data sourced from <a href="https://www.nasa.gov/missions/artemis/artemis-2/" target="_blank">NASA Artemis II</a>
+    </p>
+    <p style="margin-top:8px">
+      © 2026 AAUG · Supported by <a href="https://cloudparadigm.com.au" target="_blank">Cloud Paradigm Pty Ltd</a>
+    </p>
+  </footer>
+</div>
+
+</body>
+</html>
