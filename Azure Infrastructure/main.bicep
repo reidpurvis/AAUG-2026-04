@@ -87,7 +87,7 @@ module keyVault 'modules/keyVault.bicep' = if (deployKeyVault) {
     name: 'kv-${nameSuffix}'
     location: location
     tags: tags
-    logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceId: ''
   }
 }
 
