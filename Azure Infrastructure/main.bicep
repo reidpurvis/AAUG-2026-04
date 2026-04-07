@@ -28,9 +28,6 @@ param deployNetwork bool = true
 @description('Deploy Log Analytics Workspace?')
 param deployLogAnalytics bool = true
 
-@description('Deployment timestamp — auto-set, do not override')
-param deployedAt string = utcNow('yyyy-MM-dd')
-
 // ── Variables ─────────────────────────────────────────────────
 var nameSuffix = '${projectName}-${environmentName}'
 var tags = {
@@ -38,7 +35,6 @@ var tags = {
   Project: projectName
   Owner: ownerTag
   ManagedBy: 'GitHub Actions + Bicep'
-  DeployedAt: deployedAt
 }
 
 // ── Resource Group ────────────────────────────────────────────
@@ -91,7 +87,7 @@ module keyVault 'modules/keyVault.bicep' = if (deployKeyVault) {
     name: 'kv-${nameSuffix}'
     location: location
     tags: tags
-    logAnalyticsWorkspaceId: deployLogAnalytics ? logAnalytics!.outputs.workspaceId : ''
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
   }
 }
 
@@ -99,6 +95,6 @@ module keyVault 'modules/keyVault.bicep' = if (deployKeyVault) {
 output resourceGroupName string = rg.name
 output resourceGroupId string = rg.id
 output storageAccountName string = storage.outputs.storageAccountName
-output keyVaultName string = deployKeyVault ? keyVault!.outputs.keyVaultName : 'not deployed'
-output vnetName string = deployNetwork ? network!.outputs.vnetName : 'not deployed'
-output logAnalyticsWorkspaceId string = deployLogAnalytics ? logAnalytics!.outputs.workspaceId : 'not deployed'
+output keyVaultName string = deployKeyVault ? keyVault.outputs.keyVaultName : 'not deployed'
+output vnetName string = deployNetwork ? network.outputs.vnetName : 'not deployed'
+output logAnalyticsWorkspaceId string = deployLogAnalytics ? logAnalytics.outputs.workspaceId : 'not deployed'
