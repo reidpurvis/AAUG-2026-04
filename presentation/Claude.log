@@ -563,3 +563,32 @@ Both pages are fully linked to each other and include navigation bars. `.gitigno
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+please fix this deployment error: Run APP_NAME="aaug-website-dev" / Failed to retrieve deployment token
+
+---
+
+### 🤖 Claude
+
+Fixed `.github/workflows/deploy-aaug-website.yml`. Three root causes:
+
+**Bug 1 — Wrong token query (primary cause of the error):**
+Old: `az staticwebapp list --query "[?name=='$APP_NAME'].repositoryToken"`
+Fixed: `az staticwebapp secrets list -n $APP_NAME --query "properties.apiKey" -o tsv`
+The `repositoryToken` field stores the GitHub PAT for source-control integration. The deployment API key used by `azure/static-web-apps-deploy@v1` is at `properties.apiKey` under `staticwebapp secrets list`.
+
+**Bug 2 — Resource Group not created automatically:**
+Old workflow exited with error if RG didn't exist. Fixed to `az group create` if needed.
+
+**Bug 3 — SWA create used `--token` (GitHub PAT):**
+Removed `--token ${{ secrets.GITHUB_TOKEN }}` from `az staticwebapp create`. That flag enables GitHub source integration which requires additional permissions. Deployment via API key doesn't need it.
+
+**Also:** Changed `AZURE_LOCATION` from `australiaeast` to `eastasia` — SWA Free tier is not available in australiaeast.
+
+---
+
+*— Log continues below as the session progresses —*
