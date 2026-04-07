@@ -616,3 +616,27 @@ That said, East US is the wrong choice for a best-practice Adelaide deployment. 
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+Please fix the content so these URLs work: https://kind-dune-036168e00.6.azurestaticapps.net/artemis.html and /index.html, and link "Cloud Paradigm Pty Ltd" to https://www.cloudparadigm.com.au
+
+---
+
+### 🤖 Claude
+
+Three fixes applied and pushed:
+
+**1. staticwebapp.config.json added**
+Azure Static Web Apps requires this file to serve `.html` pages correctly. Without it, direct URL navigation to `/index.html` and `/artemis.html` returns 404. Added explicit route rules, a navigation fallback, 404 override, and correct MIME types.
+
+**2. Cloud Paradigm links fixed — all point to https://www.cloudparadigm.com.au**
+- `index.html` footer: fixed `cloudparadigm.com.au` → `www.cloudparadigm.com.au`
+- `index.html` sponsor pill: changed from a plain `<div>` to a proper `<a href>` link
+- `artemis.html` footer: fixed `cloudparadigm.com.au` → `www.cloudparadigm.com.au`
+
+---
+
+*— Log continues below as the session progresses —*
