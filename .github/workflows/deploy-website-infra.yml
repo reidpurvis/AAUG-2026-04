@@ -1,0 +1,186 @@
+name: Deploy AAUG Website Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'AAUG Website Infra/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'AAUG Website Infra/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      location:
+        description: 'Azure region'
+        required: false
+        default: 'australiaeast'
+
+# ── Permissions for OIDC authentication ───────────────────────
+permissions:
+  id-token: write
+  contents: read
+
+# ── Prevent concurrent deployments to same environment ────────
+concurrency:
+  group: website-deploy-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+env:
+  BICEP_FILE: './AAUG Website Infra/main.bicep'
+  LOCATION: ${{ github.event.inputs.location || 'australiaeast' }}
+
+jobs:
+  # ────────────────────────────────────────────────────────────
+  # JOB 1: Validate & What-If (runs on PR and push)
+  # ────────────────────────────────────────────────────────────
+  validate:
+    name: Validate & What-If (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Bicep CLI
+        run: az bicep install && az bicep version
+
+      - name: Lint Bicep templates
+        run: |
+          echo "🔍 Linting Bicep files..."
+          az bicep lint --file "${{ env.BICEP_FILE }}"
+          az bicep lint --file "AAUG Website Infra/modules/staticWebApp.bicep"
+          az bicep lint --file "AAUG Website Infra/modules/storageAccount.bicep"
+          echo "✅ Lint validation passed"
+
+      - name: Validate deployment
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          PARAMS_FILE="./AAUG Website Infra/parameters/parameters.${ENV}.json"
+
+          echo "📋 Validating deployment for environment: ${ENV}"
+          az deployment sub validate \
+            --name "validate-website-${{ github.run_id }}" \
+            --location "${{ env.LOCATION }}" \
+            --template-file "${{ env.BICEP_FILE }}" \
+            --parameters "@${PARAMS_FILE}" \
+            --output table
+          echo "✅ Validation passed"
+
+      - name: What-If analysis
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          PARAMS_FILE="./AAUG Website Infra/parameters/parameters.${ENV}.json"
+
+          echo "🔮 Running What-If analysis..."
+          az deployment sub what-if \
+            --name "whatif-website-${{ github.run_id }}" \
+            --location "${{ env.LOCATION }}" \
+            --template-file "${{ env.BICEP_FILE }}" \
+            --parameters "@${PARAMS_FILE}" \
+            --result-format FullResourcePayloads \
+            --output table
+          echo "✅ What-If analysis complete"
+
+      - name: Azure logout
+        if: always()
+        run: az logout
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 2: Deploy (runs on push to main or manual trigger only)
+  # ────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Bicep CLI
+        run: az bicep install && az bicep version
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          PARAMS_FILE="./AAUG Website Infra/parameters/parameters.${ENV}.json"
+
+          echo "🚀 Deploying AAUG Website Infrastructure to environment: ${ENV}"
+
+          OUTPUT=$(az deployment sub create \
+            --name "deploy-website-${ENV}-${{ github.run_id }}" \
+            --location "${{ env.LOCATION }}" \
+            --template-file "${{ env.BICEP_FILE }}" \
+            --parameters "@${PARAMS_FILE}" \
+            --output json)
+
+          echo "deployment_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "✅ Deployment complete"
+
+      - name: Output deployment results
+        run: |
+          echo "### 🎉 Deployment Outputs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ github.event.inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region**: ${{ env.LOCATION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Resource Outputs" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo '${{ steps.deploy.outputs.deployment_output }}' | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); [print(f'{k}: {v.get(\"value\", \"\")}') for k,v in d.get('properties',{}).get('outputs',{}).items()]" \
+            >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment ID**: \`deploy-website-${{ github.event.inputs.environment || 'dev' }}-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **AAUG Website Infrastructure** validation passed. Ready to merge and deploy.'
+            })
+
+      - name: Azure logout
+        if: always()
+        run: az logout
