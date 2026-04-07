@@ -713,3 +713,28 @@ Storage account names are globally unique. After the region change from `eastus2
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+fix this error: BCP037 staticWebsite on BlobServicePropertiesProperties / InvalidResourceGroupLocation aaug-website-rg already exists in eastus2
+
+---
+
+### 🤖 Claude
+
+Fixed two bugs:
+
+**Bug 1 — BCP037: `staticWebsite` not a valid Bicep type property on blobServices**
+The Azure Bicep type definitions for `Microsoft.Storage/storageAccounts/blobServices@2023-01-01` do not expose the `staticWebsite` property (even though it is valid in the ARM REST API). Since the SWA is the primary hosting mechanism anyway, removed static website configuration from the storage module entirely and simplified it to a clean hardened storage account.
+
+**Bug 2 — InvalidResourceGroupLocation: `aaug-website-rg` already exists in `eastus2`**
+Azure resource groups cannot change location. The old RG was created during the first (broken) deployment to `eastus2`. Fix: renamed the resource group from `aaug-website-rg` → `rg-aaug-website` in `main.bicep` and the `deploy-aaug-website.yml` workflow so a fresh RG is created in `eastasia`.
+
+**Manual step required:** Delete the old resource group from the Azure Portal:
+`https://portal.azure.com` → Resource groups → `aaug-website-rg` → Delete resource group
+
+---
+
+*— Log continues below as the session progresses —*
