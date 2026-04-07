@@ -1,204 +1,160 @@
 #!/bin/bash
 set -e
 
-# AAUG Website Deployment — GitHub Actions Setup Script
-# This script configures Azure authentication for the GitHub Actions pipeline
-
-echo "🚀 AAUG Website Deployment Pipeline Setup"
-echo "==========================================="
+echo "🔧 Setting up AAUG Website deployment..."
 echo ""
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
 
 # Check prerequisites
-echo -e "${BLUE}Checking prerequisites...${NC}"
+echo "📋 Checking prerequisites..."
 
+# Check Azure CLI
 if ! command -v az &> /dev/null; then
-    echo -e "${RED}❌ Azure CLI not found. Please install it first:${NC}"
-    echo "   https://docs.microsoft.com/cli/azure/install-azure-cli"
-    exit 1
+  echo "❌ Azure CLI not found. Install from: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli"
+  exit 1
 fi
+echo "✅ Azure CLI found"
 
+# Check GitHub CLI
 if ! command -v gh &> /dev/null; then
-    echo -e "${RED}❌ GitHub CLI not found. Please install it first:${NC}"
-    echo "   https://cli.github.com"
-    exit 1
+  echo "❌ GitHub CLI not found. Install from: https://cli.github.com/"
+  exit 1
 fi
+echo "✅ GitHub CLI found"
 
-if ! command -v jq &> /dev/null; then
-    echo -e "${RED}❌ jq not found. Please install it first:${NC}"
-    echo "   macOS: brew install jq"
-    echo "   Ubuntu: sudo apt-get install jq"
-    exit 1
+# Check logged into Azure
+if ! az account show &>/dev/null; then
+  echo "❌ Not logged into Azure. Run: az login"
+  exit 1
 fi
+echo "✅ Logged into Azure"
 
-echo -e "${GREEN}✅ All prerequisites installed${NC}"
-echo ""
-
-# Get current Azure context
-echo -e "${BLUE}Current Azure subscription:${NC}"
-SUBSCRIPTION=$(az account show --query id -o tsv)
+# Get current Azure subscription
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 SUBSCRIPTION_NAME=$(az account show --query name -o tsv)
-TENANT_ID=$(az account show --query tenantId -o tsv)
-echo "  Subscription: $SUBSCRIPTION_NAME ($SUBSCRIPTION)"
-echo "  Tenant: $TENANT_ID"
+echo "  Subscription: $SUBSCRIPTION_NAME ($SUBSCRIPTION_ID)"
 echo ""
 
-# Get GitHub repo info
-echo -e "${BLUE}GitHub repository:${NC}"
-GITHUB_REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
-GITHUB_ORG=$(echo $GITHUB_REPO | cut -d'/' -f1)
-REPO_NAME=$(echo $GITHUB_REPO | cut -d'/' -f2)
-echo "  Repository: $GITHUB_REPO"
+# Get GitHub info
+GH_USER=$(gh api user -q .login)
+GH_REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+echo "✅ Logged into GitHub"
+echo "  Repository: $GH_REPO"
+echo "  User: $GH_USER"
 echo ""
 
-# Confirm Azure infrastructure
-echo -e "${YELLOW}⚠️  Ensuring Azure infrastructure exists...${NC}"
-RESOURCE_GROUP="aaug-website-rg"
-if az group exists -n $RESOURCE_GROUP -o tsv | grep -q true; then
-    echo -e "${GREEN}✅ Resource Group found: $RESOURCE_GROUP${NC}"
+# Create resource group if it doesn't exist
+RG_NAME="aaug-website-rg"
+LOCATION="eastus2"
+
+echo "📦 Setting up Azure resources..."
+if az group exists -n "$RG_NAME" -o tsv | grep -q true; then
+  echo "✅ Resource Group exists: $RG_NAME"
 else
-    echo -e "${RED}❌ Resource Group not found: $RESOURCE_GROUP${NC}"
-    echo ""
-    echo "Please run the Bicep deployment first:"
-    echo "  cd AAUG\\ Website\\ Infra"
-    echo "  ./deploy.sh"
-    echo ""
-    read -p "Press Enter once you've deployed the infrastructure, or Ctrl+C to exit: "
+  echo "📝 Creating Resource Group: $RG_NAME"
+  az group create -n "$RG_NAME" -l "$LOCATION"
+  echo "✅ Resource Group created"
 fi
-
-# Check for Static Web App
-SWA_NAME=$(az staticwebapp list -g $RESOURCE_GROUP --query "[0].name" -o tsv 2>/dev/null || echo "")
-if [ -z "$SWA_NAME" ]; then
-    echo -e "${RED}❌ No Static Web App found in $RESOURCE_GROUP${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ Static Web App found: $SWA_NAME${NC}"
 echo ""
 
-# Create Service Principal
-echo -e "${BLUE}Creating Azure Service Principal...${NC}"
-SP_NAME="aaug-website-github-deployment"
-SP_DISPLAY_NAME="AAUG Website GitHub Deployment"
+# Deploy Bicep infrastructure
+echo "🏗️  Deploying infrastructure (this may take 2-3 minutes)..."
+cd "AAUG Website Infra"
 
-echo "  Name: $SP_DISPLAY_NAME"
+for ENV in dev staging prod; do
+  echo "  Deploying $ENV environment..."
 
-# Check if SP already exists
-EXISTING_SP=$(az ad app list --filter "displayName eq '$SP_DISPLAY_NAME'" --query "[0]" -o json 2>/dev/null || echo "")
+  az deployment group create \
+    --name "aaug-website-$ENV" \
+    --resource-group "$RG_NAME" \
+    --template-file main.bicep \
+    --parameters \
+      environmentName="$ENV" \
+      location="$LOCATION" \
+      projectName="aaug" \
+      websiteName="aaug-website" \
+      ownerTag="AAUG" \
+      deployStaticWebApp=true \
+      deployStorageAccount=true \
+    --no-wait
+done
 
-if [ "$EXISTING_SP" != "" ]; then
-    echo -e "${YELLOW}⚠️  Service Principal already exists, updating...${NC}"
-    CLIENT_ID=$(echo $EXISTING_SP | jq -r '.appId')
-    OBJECT_ID=$(echo $EXISTING_SP | jq -r '.id')
+cd ..
+echo "✅ Infrastructure deployment initiated (running in background)"
+echo ""
+
+# Configure GitHub secrets
+echo "🔐 Setting up GitHub secrets..."
+
+# Check if secrets are already set
+if gh secret list -R "$GH_REPO" --json name -q | grep -q AZURE_SUBSCRIPTION_ID; then
+  echo "✅ Secrets already configured"
 else
-    # Create new app registration
-    APP_OUTPUT=$(az ad app create --display-name "$SP_DISPLAY_NAME" -o json)
-    CLIENT_ID=$(echo $APP_OUTPUT | jq -r '.appId')
-    OBJECT_ID=$(echo $APP_OUTPUT | jq -r '.id')
+  echo "📝 Configuring Azure secrets..."
 
-    # Create service principal
-    az ad sp create --id $CLIENT_ID > /dev/null
-    echo "  Created: $CLIENT_ID"
+  # Create service principal for GitHub deployment
+  echo "  Creating service principal..."
+
+  PRINCIPAL_NAME="github-aaug-website-deploy"
+
+  # Check if principal already exists
+  PRINCIPAL=$(az ad sp list --display-name "$PRINCIPAL_NAME" --query "[0].id" -o tsv 2>/dev/null || echo "")
+
+  if [ -z "$PRINCIPAL" ]; then
+    # Create new service principal
+    az ad sp create-for-rbac \
+      --name "$PRINCIPAL_NAME" \
+      --role Contributor \
+      --scopes "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME" \
+      --output json > /tmp/sp.json
+
+    TENANT_ID=$(jq -r '.tenant' /tmp/sp.json)
+    CLIENT_ID=$(jq -r '.clientId' /tmp/sp.json)
+
+    echo "  ✅ Service Principal created: $PRINCIPAL_NAME"
+  else
+    echo "  ℹ️  Service principal already exists"
+    TENANT_ID=$(az account show --query tenantId -o tsv)
+    CLIENT_ID=$(az ad sp show --id "$PRINCIPAL" --query appId -o tsv)
+  fi
+
+  # Set secrets
+  echo "  Setting GitHub secrets..."
+  gh secret set AZURE_CLIENT_ID -b"$CLIENT_ID" -R "$GH_REPO"
+  gh secret set AZURE_TENANT_ID -b"$TENANT_ID" -R "$GH_REPO"
+  gh secret set AZURE_SUBSCRIPTION_ID -b"$SUBSCRIPTION_ID" -R "$GH_REPO"
+
+  echo "  ✅ GitHub secrets configured:"
+  echo "    - AZURE_CLIENT_ID"
+  echo "    - AZURE_TENANT_ID"
+  echo "    - AZURE_SUBSCRIPTION_ID"
 fi
-
-echo -e "${GREEN}✅ Service Principal: $CLIENT_ID${NC}"
-echo ""
-
-# Assign role
-echo -e "${BLUE}Assigning Contributor role to resource group...${NC}"
-ROLE_EXISTS=$(az role assignment list --assignee $CLIENT_ID \
-    --role "Contributor" \
-    --resource-group $RESOURCE_GROUP \
-    --query "[0]" 2>/dev/null || echo "")
-
-if [ "$ROLE_EXISTS" = "" ]; then
-    az role assignment create \
-        --role "Contributor" \
-        --assignee-object-id $OBJECT_ID \
-        --resource-group $RESOURCE_GROUP > /dev/null
-    echo -e "${GREEN}✅ Role assigned${NC}"
-else
-    echo -e "${GREEN}✅ Role already assigned${NC}"
-fi
-echo ""
-
-# Create Federated Identity Credential
-echo -e "${BLUE}Setting up Federated Identity for GitHub Actions...${NC}"
-
-FEDERATED_NAME="github-deployment-${REPO_NAME}"
-ISSUER="https://token.actions.githubusercontent.com"
-SUBJECT="repo:${GITHUB_REPO}:ref:refs/heads/main"
-
-echo "  Issuer: $ISSUER"
-echo "  Subject: $SUBJECT"
-
-# Check if credential already exists
-EXISTING_CRED=$(az identity federated-credential list \
-    --name $FEDERATED_NAME \
-    --resource-group $RESOURCE_GROUP \
-    --identity-name $FEDERATED_NAME \
-    --query "[0]" 2>/dev/null || echo "")
-
-# For service principal, we need to create it differently
-# Using the service principal directly with federated credentials
-az ad app federated-credential create \
-    --id $OBJECT_ID \
-    --parameters "{ \
-        \"name\": \"$FEDERATED_NAME\", \
-        \"issuer\": \"$ISSUER\", \
-        \"subject\": \"$SUBJECT\", \
-        \"audiences\": [\"api://AzureADTokenExchange\"] \
-    }" 2>/dev/null || true
-
-echo -e "${GREEN}✅ Federated Identity configured${NC}"
-echo ""
-
-# Set GitHub Secrets
-echo -e "${BLUE}Configuring GitHub Secrets...${NC}"
-
-# Check if already set
-echo "  Setting AZURE_CLIENT_ID..."
-gh secret set AZURE_CLIENT_ID --body "$CLIENT_ID" 2>/dev/null || \
-  gh secret set AZURE_CLIENT_ID --body "$CLIENT_ID"
-
-echo "  Setting AZURE_TENANT_ID..."
-gh secret set AZURE_TENANT_ID --body "$TENANT_ID" 2>/dev/null || \
-  gh secret set AZURE_TENANT_ID --body "$TENANT_ID"
-
-echo "  Setting AZURE_SUBSCRIPTION_ID..."
-gh secret set AZURE_SUBSCRIPTION_ID --body "$SUBSCRIPTION" 2>/dev/null || \
-  gh secret set AZURE_SUBSCRIPTION_ID --body "$SUBSCRIPTION"
-
-echo -e "${GREEN}✅ GitHub Secrets configured${NC}"
 echo ""
 
 # Summary
-echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}✅ Setup Complete!${NC}"
-echo -e "${GREEN}============================================${NC}"
+echo "╔═════════════════════════════════════════════════════════════╗"
+echo "║          ✅ SETUP COMPLETE - READY TO DEPLOY! 🚀            ║"
+echo "╚═════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Service Principal:"
-echo "  Client ID: $CLIENT_ID"
-echo "  Tenant ID: $TENANT_ID"
+echo "📝 Next Steps:"
 echo ""
-echo "GitHub Secrets added to: $GITHUB_REPO"
-echo "  AZURE_CLIENT_ID"
-echo "  AZURE_TENANT_ID"
-echo "  AZURE_SUBSCRIPTION_ID"
+echo "1. Verify infrastructure is deployed:"
+echo "   az staticwebapp list -g aaug-website-rg"
 echo ""
-echo "Next steps:"
-echo "  1. Push a change to AAUG Website App/ to trigger deployment"
-echo "  2. Check GitHub Actions for deployment status"
-echo "  3. Access your website at the generated URL"
+echo "2. Make changes to AAUG Website App/"
 echo ""
-echo "To manually trigger deployment:"
-echo "  gh workflow run deploy-aaug-website.yml --ref main -f environment=dev"
+echo "3. Commit and push to trigger automatic deployment:"
+echo "   git add AAUG\ Website\ App/"
+echo "   git commit -m 'Update website'"
+echo "   git push origin main"
 echo ""
-echo "To view deployment logs:"
-echo "  gh run list --workflow=deploy-aaug-website.yml --limit 1"
+echo "4. Watch deployment in GitHub Actions:"
+echo "   gh run list --workflow=deploy-aaug-website.yml"
+echo ""
+echo "5. Visit your live website when deployed! 🎉"
+echo ""
+echo "💡 Tips:"
+echo "  - Pipeline triggers automatically on changes to AAUG Website App/"
+echo "  - Deployment takes ~2-3 minutes from push to live"
+echo "  - Check PIPELINE_GUIDE.md for detailed documentation"
+echo "  - View logs: gh run view <run-id> --log"
 echo ""
