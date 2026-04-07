@@ -122,20 +122,38 @@ jobs:
 
           if ! az group exists -n ${{ env.RESOURCE_GROUP }} -o tsv | grep -q true; then
             echo "❌ Resource Group not found: ${{ env.RESOURCE_GROUP }}"
-            echo "📝 Please deploy infrastructure first:"
+            echo ""
+            echo "📝 Instructions to create infrastructure:"
+            echo ""
+            echo "1. Deploy the Bicep template:"
             echo "   cd AAUG\ Website\ Infra"
-            echo "   az deployment sub create --name aaug-website-${ENV_NAME} --location ${{ env.AZURE_LOCATION }} --template-file main.bicep --parameters @parameters/parameters.${ENV_NAME}.json"
+            echo "   az deployment sub create \\"
+            echo "     --name aaug-website-${ENV_NAME} \\"
+            echo "     --location eastus2 \\"
+            echo "     --template-file main.bicep \\"
+            echo "     --parameters \\"
+            echo "       environmentName=${ENV_NAME} \\"
+            echo "       location=eastus2"
+            echo ""
+            echo "2. Or create resource group manually:"
+            echo "   az group create -n ${{ env.RESOURCE_GROUP }} -l eastus2"
+            echo ""
             exit 1
           fi
           echo "✅ Resource Group found"
 
-          SWA=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} -o json 2>/dev/null | jq "[.[] | select(.name==\"$APP_NAME\")] | length")
-          if [ "$SWA" -eq 0 ]; then
-            echo "❌ Static Web App not found: $APP_NAME"
-            echo "📝 Please deploy the AAUG Website Infra bicep templates first"
-            exit 1
+          # Check if Static Web App exists
+          SWA_COUNT=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} --query "[?name=='$APP_NAME'] | length(@)" -o tsv 2>/dev/null || echo "0")
+
+          if [ "$SWA_COUNT" -eq 0 ]; then
+            echo "⚠️  Static Web App does not exist yet: $APP_NAME"
+            echo "   It will be created automatically during deployment"
+            echo ""
+            echo "Available Static Web Apps in ${{ env.RESOURCE_GROUP }}:"
+            az staticwebapp list -g ${{ env.RESOURCE_GROUP }} --query "[].{Name:name, State:state}" -o table 2>/dev/null || echo "  (none)"
+          else
+            echo "✅ Static Web App found: $APP_NAME"
           fi
-          echo "✅ Static Web App found: $APP_NAME"
 
           echo "ready=true" >> $GITHUB_OUTPUT
           echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
@@ -164,30 +182,89 @@ jobs:
         run: |
           echo "🔑 Retrieving deployment token..."
           APP_NAME="${{ needs.check-infrastructure.outputs.app_name }}"
+          RG="${{ env.RESOURCE_GROUP }}"
 
-          max_attempts=3
+          # Check if Static Web App exists
+          echo "📍 Checking for Static Web App: $APP_NAME"
+          SWA_EXISTS=$(az staticwebapp list -g "$RG" --query "[?name=='$APP_NAME'] | length(@)" -o tsv)
+
+          if [ "$SWA_EXISTS" -eq 0 ]; then
+            echo "❌ Static Web App does not exist: $APP_NAME"
+            echo ""
+            echo "Available Static Web Apps:"
+            az staticwebapp list -g "$RG" --query "[].name" -o table
+            echo ""
+            echo "📝 Creating Static Web App..."
+            az staticwebapp create \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --location "eastus2" \
+              --sku Free \
+              --source "https://github.com/${{ github.repository }}" \
+              --branch "main" \
+              --app-location "AAUG Website App" \
+              --output-location "." \
+              --token "${{ secrets.GITHUB_TOKEN }}" || true
+
+            echo "⏳ Waiting for Static Web App to be created..."
+            sleep 15
+          fi
+
+          # Try to retrieve deployment token
+          max_attempts=5
           attempt=1
           while [ $attempt -le $max_attempts ]; do
-            token=$(az staticwebapp list -g ${{ env.RESOURCE_GROUP }} \
-              --query "[?name=='$APP_NAME'].repositoryToken" -o tsv 2>/dev/null)
+            echo "🔄 Attempt $attempt/$max_attempts to retrieve token..."
 
-            if [ -n "$token" ]; then
-              echo "✅ Deployment token retrieved"
+            # Method 1: Query from list
+            token=$(az staticwebapp list -g "$RG" \
+              --query "[?name=='$APP_NAME'].repositoryToken" -o tsv 2>/dev/null | head -1)
+
+            # Method 2: If list fails, try show command
+            if [ -z "$token" ]; then
+              token=$(az staticwebapp show -g "$RG" -n "$APP_NAME" \
+                --query "repositoryToken" -o tsv 2>/dev/null || echo "")
+            fi
+
+            # Method 3: If still no token, try secrets endpoint
+            if [ -z "$token" ]; then
+              token=$(az rest --method post \
+                --url "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$APP_NAME/listSecrets?api-version=2023-01-01" \
+                --query "properties.repositoryToken" -o tsv 2>/dev/null || echo "")
+            fi
+
+            if [ -n "$token" ] && [ "$token" != "None" ] && [ "$token" != "" ]; then
+              echo "✅ Deployment token retrieved successfully!"
               echo "::add-mask::$token"
               echo "deployment_token=$token" >> $GITHUB_OUTPUT
-              break
+              exit 0
             fi
 
-            if [ $attempt -lt $max_attempts ]; then
-              echo "⏳ Retrying... (attempt $attempt/$max_attempts)"
-              sleep 5
-            else
-              echo "❌ Failed to retrieve deployment token"
-              exit 1
-            fi
-
+            echo "⏳ Token not available yet, retrying in 10 seconds... (attempt $attempt/$max_attempts)"
+            sleep 10
             ((attempt++))
           done
+
+          echo ""
+          echo "❌ Failed to retrieve deployment token after $max_attempts attempts"
+          echo ""
+          echo "🔍 Debugging Information:"
+          echo "  Resource Group: $RG"
+          echo "  App Name: $APP_NAME"
+          echo "  Subscription ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          echo ""
+          echo "📋 Static Web Apps in resource group:"
+          az staticwebapp list -g "$RG" -o table 2>/dev/null || echo "  (none found)"
+          echo ""
+          echo "🔧 Troubleshooting steps:"
+          echo "  1. Verify resource group exists:"
+          echo "     az group show -n $RG"
+          echo "  2. Verify Static Web App exists:"
+          echo "     az staticwebapp show -g $RG -n $APP_NAME"
+          echo "  3. Check permissions:"
+          echo "     az role assignment list --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG"
+          echo ""
+          exit 1
 
       - name: Get Static Web App URL
         id: swa-url
@@ -203,6 +280,16 @@ jobs:
           else
             echo "app_url=https://${APP_NAME}.azurestaticapps.net" >> $GITHUB_OUTPUT
           fi
+
+      - name: Verify deployment token
+        run: |
+          TOKEN="${{ steps.swa-token.outputs.deployment_token }}"
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
+            echo "❌ Deployment token is empty or invalid"
+            echo "⚠️  Cannot proceed with deployment"
+            exit 1
+          fi
+          echo "✅ Deployment token is valid and ready"
 
       - name: Deploy website files
         uses: azure/static-web-apps-deploy@v1
