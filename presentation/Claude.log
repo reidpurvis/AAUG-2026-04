@@ -685,3 +685,31 @@ Fixed all location references across the AAUG Website Infra folder. Changes made
 ---
 
 *— Log continues below as the session progresses —*
+
+---
+
+### 🧑 Reid
+
+please fix: BCP053 listSecrets apiKey / BCP037 staticWebsite property / BCP318 module null / InvalidResourceLocation storage conflict
+
+---
+
+### 🤖 Claude
+
+Fixed four distinct Bicep bugs:
+
+**Bug 1 — `staticWebApp.bicep`: `listSecrets().apiKey` wrong path (BCP053)**
+`listSecrets()` on a Static Web App returns a `StringDictionary` with properties `id`, `kind`, `name`, `properties`, `type` — not a direct `.apiKey`. The API key lives at `.properties.apiKey`. But the linter also flags secrets in outputs (`outputs-should-not-contain-secrets`). Fix: removed the secret output entirely. The pipeline retrieves the key at runtime with `az staticwebapp secrets list --query properties.apiKey`.
+
+**Bug 2 — `storageAccount.bicep`: `staticWebsite` on wrong resource (BCP037)**
+`staticWebsite` is not a valid property on `Microsoft.Storage/storageAccounts@2023-01-01`. It belongs on the child `blobServices` resource. Moved to `blobService.properties.staticWebsite` with `enabled: true/false`.
+
+**Bug 3 — `main.bicep`: conditional module outputs (BCP318)**
+All four conditional outputs now use `!` null-assertion operator: `staticWebApp!.outputs.X`, `storage!.outputs.X`.
+
+**Bug 4 — Runtime: `staaugdevweb` already exists in `eastus2` (InvalidResourceLocation)**
+Storage account names are globally unique. After the region change from `eastus2` → `eastasia`, the old `staaugdevweb` account blocks deployment. Fixed by replacing the hardcoded name pattern with a `uniqueString(subscription().subscriptionId, nameSuffix)` hash — generates a stable but subscription-unique name that won't conflict with the old one.
+
+---
+
+*— Log continues below as the session progresses —*

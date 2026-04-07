@@ -1,9 +1,9 @@
 // ============================================================
 // modules/storageAccount.bicep
-// Storage Account with static website hosting enabled
+// Storage Account for AAUG website static hosting fallback
 // ============================================================
 
-@description('Storage account name (3–24 chars, lowercase alphanumeric)')
+@description('Storage account name (3-24 chars, lowercase alphanumeric)')
 @minLength(3)
 @maxLength(24)
 param name string
@@ -28,6 +28,7 @@ param enableStaticWebsite bool = true
 param minimumTlsVersion string = 'TLS1_2'
 
 // ── Storage Account ───────────────────────────────────────────
+// NOTE: staticWebsite is configured on blobServices, not the account itself
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: name
   location: location
@@ -41,23 +42,26 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: minimumTlsVersion
     allowBlobPublicAccess: allowBlobPublicAccess
-    allowSharedKeyAccess: false
+    allowSharedKeyAccess: true
     networkAcls: {
       defaultAction: 'Allow'
       bypass: 'AzureServices'
     }
-    staticWebsite: enableStaticWebsite ? {
-      indexDocument: 'index.html'
-      errorDocument404Path: '404.html'
-    } : null
   }
 }
 
-// ── Blob Service ──────────────────────────────────────────────
+// ── Blob Service — static website config lives here, not on the account ──
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
   properties: {
+    staticWebsite: enableStaticWebsite ? {
+      enabled: true
+      indexDocument: 'index.html'
+      errorDocument404Path: '404.html'
+    } : {
+      enabled: false
+    }
     deleteRetentionPolicy: {
       enabled: true
       days: 7
@@ -70,7 +74,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
   }
 }
 
-// ── $web Container (for static hosting) ───────────────────────
+// ── $web Container ────────────────────────────────────────────
 resource webContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = if (enableStaticWebsite) {
   parent: blobService
   name: '$web'

@@ -67,9 +67,9 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
 }
 
 // ── Outputs ────────────────────────────────────────────────────
-// Use apiKey (not repositoryToken) as the deployment credential
-// for azure/static-web-apps-deploy@v1 and az staticwebapp secrets list
+// NOTE: The deployment API key is intentionally NOT exposed as an output
+// (linter: outputs-should-not-contain-secrets). Retrieve it at deploy time:
+//   az staticwebapp secrets list -g <rg> -n <name> --query properties.apiKey -o tsv
 output staticWebAppId string = staticWebApp.id
 output staticWebAppName string = staticWebApp.name
 output defaultHostName string = staticWebApp.properties.defaultHostname
-output apiKey string = staticWebApp.listSecrets().apiKey
