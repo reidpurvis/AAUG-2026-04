@@ -1,6 +1,6 @@
 // ============================================================
 // modules/staticWebApp.bicep
-// Azure Static Web Apps resource
+// Azure Static Web Apps resource with GitHub integration
 // ============================================================
 
 @description('Static Web App name')
@@ -22,20 +22,23 @@ param skuName string = 'Free'
 @allowed(['Free', 'Standard'])
 param skuTier string = 'Free'
 
-@description('Source control repository URL (optional)')
-param repositoryUrl string = ''
+@description('GitHub repository owner')
+param githubOwner string = ''
 
-@description('GitHub repository branch (optional)')
-param repositoryBranch string = 'main'
+@description('GitHub repository name')
+param githubRepo string = ''
+
+@description('GitHub repository branch')
+param githubBranch string = 'main'
 
 @description('App location in repository')
-param appLocation string = '/'
+param appLocation string = 'AAUG Website App'
 
 @description('API location in repository (optional)')
 param apiLocation string = ''
 
 @description('Output location for build artifacts')
-param outputLocation string = ''
+param outputLocation string = '.'
 
 // ── Static Web App ────────────────────────────────────────────
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
@@ -47,20 +50,27 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
     tier: skuTier
   }
   properties: {
-    provider: !empty(repositoryUrl) ? 'GitHub' : 'None'
-    repositoryUrl: !empty(repositoryUrl) ? repositoryUrl : null
-    branch: !empty(repositoryUrl) ? repositoryBranch : null
+    provider: (!empty(githubOwner) && !empty(githubRepo)) ? 'GitHub' : 'None'
+    repositoryUrl: (!empty(githubOwner) && !empty(githubRepo)) ? 'https://github.com/${githubOwner}/${githubRepo}' : null
+    branch: (!empty(githubOwner) && !empty(githubRepo)) ? githubBranch : null
     buildProperties: {
       appLocation: appLocation
       apiLocation: apiLocation
       outputLocation: outputLocation
-      skipGithubActionWorkflowGeneration: false
+      skipGithubActionWorkflowGeneration: true
     }
     allowConfigFileUpdates: false
     stagingEnvironmentPolicy: 'Enabled'
     enterpriseGradeCdnStatus: skuTier == 'Standard' ? 'Enabled' : 'Disabled'
   }
 }
+
+// ── Outputs ───────────────────────────────────────────────────
+output staticWebAppId string = staticWebApp.id
+output staticWebAppName string = staticWebApp.name
+output defaultHostName string = staticWebApp.properties.defaultHostname
+output repositoryToken string = staticWebApp.listSecrets().repositoryToken
+
 
 // ── Outputs ───────────────────────────────────────────────────
 output staticWebAppId string = staticWebApp.id

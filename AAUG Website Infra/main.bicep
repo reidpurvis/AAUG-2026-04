@@ -67,6 +67,11 @@ module staticWebApp 'modules/staticWebApp.bicep' = if (deployStaticWebApp) {
     tags: tags
     skuName: environmentName == 'prod' ? 'Standard' : 'Free'
     skuTier: environmentName == 'prod' ? 'Standard' : 'Free'
+    githubOwner: 'reidpurvis'
+    githubRepo: 'AAUG-2026-04'
+    githubBranch: 'main'
+    appLocation: 'AAUG Website App'
+    outputLocation: '.'
   }
 }
 
