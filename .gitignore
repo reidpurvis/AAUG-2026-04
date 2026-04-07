@@ -9,6 +9,10 @@
 !Azure Infrastructure/
 !Azure Infrastructure/**
 
+# Re-include AAUG Website Infrastructure folder and all its contents
+!AAUG Website Infra/
+!AAUG Website Infra/**
+
 # Re-include GitHub Actions workflows
 !.github/
 !.github/**
